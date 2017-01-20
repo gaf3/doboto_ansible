@@ -8,9 +8,9 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   # Every Vagrant virtual environment requires a box to build off of.
 
-  config.vm.hostname = "doboto-droplet-sandbox"
+  config.vm.hostname = "doboto-ansible-sandbox"
   config.vm.box = "ubuntu/trusty64"
-  config.vm.define "doboto_droplet_sandbox" do |doboto_sandbox|
+  config.vm.define "doboto_ansible_sandbox" do |doboto_ansible_sandbox|
   end
 
   # Share an additional folder to the guest VM. The first argument is
@@ -18,7 +18,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   # the path on the guest to mount the folder. And the optional third
   # argument is a set of non-required options.
   config.vm.synced_folder "../../doboto", "/home/vagrant/doboto"
-  config.vm.synced_folder "../../doboto_droplet", "/home/vagrant/doboto_droplet"
+  config.vm.synced_folder "../../doboto_ansible", "/home/vagrant/doboto_ansible"
   config.ssh.forward_agent = true
 
   # Use VM Fusion by default but virtual box is fine too
