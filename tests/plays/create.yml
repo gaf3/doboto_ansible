@@ -1,0 +1,20 @@
+- hosts: sparse
+  connection: local
+  vars:
+     ansible_python_interpreter: "/usr/bin/python"
+  gather_facts: false
+  tasks:
+
+  - name: provision instance
+    doboto_droplet:
+      token: "{{ lookup('env','DOBOTO_TOKEN') }}"
+      action: create
+      name: "{{ inventory_hostname }}"
+      region: nyc3
+      size: 2gb
+      image: ubuntu-14-04-x64
+    register: sparse
+
+  - name: List result
+    debug:
+      var: sparse
