@@ -77,6 +77,12 @@ options:
     tags:
         description:
             - same as DO API variable (if single value, converted to array)
+    wait:
+        description:
+            - wait until tasks has completed before continuing
+    poll:
+        description:
+            - poll value to check while waiting (default 5 seconds)
     url:
         description:
             - URL to use if not official (for experimenting)
@@ -92,6 +98,7 @@ EXAMPLES = '''
 
 '''
 
+import time
 from ansible.module_utils.basic import *
 
 try:
@@ -118,68 +125,86 @@ def create(do, module):
             module.fail_json(msg="the %s parameter is required" % required)
         attribs[required] = module.params[required]
 
-    for lists in ['ssh_keys', 'volume', 'tags']:
-        if module.params[lists] is None:
-            if isinstance(module.params[lists], list):
-                attribs[lists] = module.params[lists]
-            else:
-                attribs[lists] = [module.params[lists]]
-
-    for optional in ['backups', 'ipv6', 'private_networking', 'user_data', 'monitoring']:
+    for optional in [
+        'ssh_keys', 'volume', 'tags','backups', 'ipv6',
+        'private_networking', 'user_data', 'monitoring'
+    ]:
         attribs[optional] = module.params[optional]
 
     if module.params['extra'] is not None:
-        if isinstance(module.params['extra'], dict):
-            module.fail_json(msg="the extra parameter must be a dict")
         attribs.update(module.params['extra'])
 
     result = do.droplet.create(attribs)
 
-    if "droplet" in result:
-        module.exit_json(changed=True, droplet=result['droplet'])
-    elif "droplets" in result:
-        module.exit_json(changed=True, droplets=result['droplets'])
-    else:
+    if "droplet" not in result and "droplets" not in result:
         module.fail_json(msg="DO API error", result=result)
 
+    if "droplet" in result:
+
+        droplet = result["droplet"]
+
+        while module.params["wait"] and result["droplet"]["status"] == "new":
+
+            time.sleep(module.params["poll"])
+            latest = do.droplet.info(droplet["id"])
+            if "droplet" in latest:
+                result = latest
+
+        module.exit_json(changed=True, droplet=result['droplet'])
+
+    elif "droplets" in result:
+
+        droplets = result["droplets"]
+
+        while module.params["wait"] and \
+            len([1 for droplet in result["droplets"] if droplet["status"] == "new"]) > 0:
+
+            time.sleep(module.params["poll"])
+
+            for index, droplet in enumerate(result["droplets"]):
+                if droplet["status"] == "new":
+                    latest = do.droplet.info(droplet["id"])
+                    if "droplet" in latest:
+                        result["droplets"][index] = latest["droplet"]
+
+        module.exit_json(changed=True, droplets=result['droplets'])
+
+    else:
+
+        module.fail_json(msg="DO API error", result=result)
 
 def main():
+
     module = AnsibleModule(
         argument_spec = dict(
-            action=dict(default=None, choices=["create"]),
-            token=dict(default=None),
+            action=dict(default=None, required=True, choices=["create"]),
+            token=dict(default=None, required=True),
             name=dict(default=None),
-            names=dict(default=None),
+            names=dict(default=None, type='list'),
             region=dict(default=None),
             size=dict(default=None),
             image=dict(default=None),
-            ssh_keys=dict(default=None),
+            ssh_keys=dict(default=None, type='list'),
             backups=dict(default=False, type='bool'),
             ipv6=dict(default=False, type='bool'),
             private_networking=dict(type='bool'),
             user_data=dict(default=False, type='bool'),
             monitoring=dict(type='bool'),
-            volume=dict(default=None),
-            tags=dict(default=None),
+            volume=dict(default=None, type='list'),
+            tags=dict(default=None, type='list'),
+            wait=dict(default=False, type='bool'),
+            poll=dict(default=5, type='int'),
             url=dict(default="https://api.digitalocean.com/v2"),
-            extra=dict(default=None),
+            extra=dict(default=None, type='dict'),
         )
     )
 
     if not doboto_found:
         module.fail_json(msg="the python doboto module is required")
 
-    if module.params["token"] is None:
-        module.fail_json(msg="the token parameter is required")
-
     do = DO(url=module.params["url"], token=module.params["token"])
-
-    if module.params["action"] is None:
-        module.fail_json(msg="the action parameter is required")
 
     if module.params["action"] == "create":
         create(do, module)
-    else:
-        module.fail_json(msg="unknown action: %s" % module.params["action"])
 
 main()

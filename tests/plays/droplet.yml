@@ -1,4 +1,4 @@
-- hosts: sparse
+- hosts: all
   connection: local
   vars:
      ansible_python_interpreter: "/usr/bin/python"
@@ -9,12 +9,35 @@
     doboto_droplet:
       token: "{{ lookup('env','DOBOTO_TOKEN') }}"
       action: create
-      name: "{{ inventory_hostname }}"
+      name: droplet-provision
       region: nyc3
-      size: 2gb
+      size: 1gb
       image: ubuntu-14-04-x64
-    register: sparse
+      ssh_keys: b5:ac:19:1a:8b:ba:7e:8c:8d:5d:a8:0c:fe:9f:9d:9e
+      tags: one
+      wait: True
+    register: droplet_provision
 
   - name: List result
     debug:
-      var: sparse
+      var: droplet_provision
+
+  - name: provision instances
+    doboto_droplet:
+      token: "{{ lookup('env','DOBOTO_TOKEN') }}"
+      action: create
+      names:
+          - droplets-provision-01
+          - droplets-provision-02
+          - droplets-provision-03
+      region: nyc3
+      size: 1gb
+      image: ubuntu-14-04-x64
+      ssh_keys: b5:ac:19:1a:8b:ba:7e:8c:8d:5d:a8:0c:fe:9f:9d:9e
+      tags: one
+      wait: True
+    register: droplets_provision
+
+  - name: List result
+    debug:
+      var: droplets_provision
