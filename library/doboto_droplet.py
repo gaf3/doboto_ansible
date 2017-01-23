@@ -38,6 +38,7 @@ options:
         droplet action
         choices:
             - create
+            - present
             - destroy
     name:
         description:
@@ -114,14 +115,22 @@ else:
     doboto_found = True
 
 
-def create(do, module):
+def create(do, module, existing=None):
+
+    if existing is None:
+        existing = []
+
+    existing_names = {droplet["name"]: True for droplet in existing}
 
     attribs = {}
 
     if module.params["name"] is not None:
         attribs["name"] = module.params["name"]
     elif module.params["names"] is not None:
-        attribs["names"] = module.params["names"]
+        attribs["names"] = []
+        for name in module.params["names"]:
+            if name not in existing_names:
+                attribs["names"].append(name)
     else:
         module.fail_json(msg="the name or names parameter is required")
 
@@ -159,24 +168,70 @@ def create(do, module):
 
     elif "droplets" in result:
 
-        droplets = result["droplets"]
+        droplets = existing
+        droplets.extend(result["droplets"])
 
         while module.params["wait"] and \
-            len([1 for droplet in result["droplets"] if droplet["status"] == "new"]) > 0:
+            len([1 for droplet in droplets if droplet["status"] == "new"]) > 0:
 
             time.sleep(module.params["poll"])
 
-            for index, droplet in enumerate(result["droplets"]):
+            for index, droplet in enumerate(droplets):
                 if droplet["status"] == "new":
                     latest = do.droplet.info(droplet["id"])
                     if "droplet" in latest:
-                        result["droplets"][index] = latest["droplet"]
+                        droplets[index] = latest["droplet"]
 
-        module.exit_json(changed=True, droplets=result['droplets'])
+        if not existing:
+            module.exit_json(changed=True, droplets=droplets)
+        else:
+            created = [droplet for droplet in droplets if droplet["name"] not in existing_names]
+            module.exit_json(changed=True, droplets=droplets, created=created)
 
     else:
 
         module.fail_json(msg="DO API error", result=result)
+
+
+def present(do, module):
+
+    if module.params["name"] is None and module.params["names"] is None:
+        module.fail_json(msg="the name or names parameter is required")
+
+    result = do.droplet.list()
+
+    if "droplets" not in result:
+        module.fail_json(msg="DO API error", result=result)
+
+    droplets = result["droplets"]
+
+    if module.params["name"] is not None:
+
+        existing = None
+        for droplet in droplets:
+            if module.params["name"] == droplet["name"]:
+                existing = droplet
+                break
+
+        if existing is not None:
+            module.exit_json(changed=False, droplet=existing)
+        else:
+            create(do, module)
+
+    else:
+
+        existing = []
+
+        for name in module.params["names"]:
+            for droplet in droplets:
+                if name == droplet["name"]:
+                    existing.append(droplet)
+                    break
+
+        if len(existing) == len(module.params["names"]):
+            module.exit_json(changed=False, droplets=existing)
+        else:
+            create(do, module, existing)
 
 
 def destroy(do, module):
@@ -199,7 +254,7 @@ def main():
 
     module = AnsibleModule(
         argument_spec = dict(
-            action=dict(default=None, required=True, choices=["create", "destroy"]),
+            action=dict(default=None, required=True, choices=["create", "present", "destroy"]),
             token=dict(default=None),
             name=dict(default=None),
             names=dict(default=None, type='list'),
@@ -238,6 +293,8 @@ def main():
 
     if module.params["action"] == "create":
         create(do, module)
+    if module.params["action"] == "present":
+        present(do, module)
     elif module.params["action"] == "destroy":
         destroy(do, module)
 
