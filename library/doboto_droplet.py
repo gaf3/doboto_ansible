@@ -33,11 +33,12 @@ author: "Gaffer Fitch <gfitch@digitalocean.com>"
 options:
     token:
         description:
-            - token to use to connect to the API
+            - token to use to connect to the API (uses DO_API_TOKEN from ENV if not found)
     action:
         droplet action
         choices:
             - create
+            - destroy
     name:
         description:
             - same as DO API variable (for single create)
@@ -77,6 +78,9 @@ options:
     tags:
         description:
             - same as DO API variable (if single value, converted to array)
+    tag:
+        description:
+            - same as DO API variable (for destryoing a droplet)
     wait:
         description:
             - wait until tasks has completed before continuing
@@ -98,6 +102,7 @@ EXAMPLES = '''
 
 '''
 
+import os
 import time
 from ansible.module_utils.basic import *
 
@@ -173,12 +178,29 @@ def create(do, module):
 
         module.fail_json(msg="DO API error", result=result)
 
+
+def destroy(do, module):
+
+    result = None
+
+    if module.params["droplet_id"] is not None:
+        result = do.droplet.destroy(droplet_id=module.params["droplet_id"])
+    elif module.params["tag"] is not None:
+        result = do.droplet.destroy(with_tag=module.params["tag"])
+    else:
+        module.fail_json(msg="the droplet_id or tag parameter is required")
+
+    if "status" not in result:
+        module.fail_json(msg="DO API error", result=result)
+
+    module.exit_json(changed=True, result=result)
+
 def main():
 
     module = AnsibleModule(
         argument_spec = dict(
-            action=dict(default=None, required=True, choices=["create"]),
-            token=dict(default=None, required=True),
+            action=dict(default=None, required=True, choices=["create", "destroy"]),
+            token=dict(default=None),
             name=dict(default=None),
             names=dict(default=None, type='list'),
             region=dict(default=None),
@@ -191,7 +213,9 @@ def main():
             user_data=dict(default=False, type='bool'),
             monitoring=dict(type='bool'),
             volume=dict(default=None, type='list'),
-            tags=dict(default=None, type='list'),
+            tags=dict(type='list'),
+            tag=dict(default=None),
+            droplet_id=dict(default=None),
             wait=dict(default=False, type='bool'),
             poll=dict(default=5, type='int'),
             url=dict(default="https://api.digitalocean.com/v2"),
@@ -202,9 +226,19 @@ def main():
     if not doboto_found:
         module.fail_json(msg="the python doboto module is required")
 
-    do = DO(url=module.params["url"], token=module.params["token"])
+    token = module.params["token"]
+
+    if token is None:
+        token = os.environ.get('DO_API_TOKEN', None)
+
+    if token is None:
+        module.fail_json(msg="the token parameter is required")
+
+    do = DO(url=module.params["url"], token=token)
 
     if module.params["action"] == "create":
         create(do, module)
+    elif module.params["action"] == "destroy":
+        destroy(do, module)
 
 main()

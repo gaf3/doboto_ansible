@@ -21,6 +21,11 @@
         name=six
         version=1.10.0
 
+    - name: Install Request security
+      pip:
+        name=requests[security]
+        state=latest
+
     - name: Install dependencies
       command: chdir=/home/vagrant/doboto make install_modules
 
@@ -29,8 +34,8 @@
 
     - name: Install markupsafe
       pip:
-        name=markupsafe
-
-    - name: Install Ansible
-      pip:
-        name=ansible
+        name={{item}}
+      with_items:
+        - markupsafe
+        - ansible
+        - jmespath

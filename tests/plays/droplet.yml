@@ -7,7 +7,7 @@
 
   - name: provision instance
     doboto_droplet:
-      token: "{{ lookup('env','DOBOTO_TOKEN') }}"
+      token: "{{ lookup('env','DO_API_TOKEN') }}"
       action: create
       name: droplet-provision
       region: nyc3
@@ -22,9 +22,14 @@
     debug:
       var: droplet_provision
 
+  - name: Display public IP address
+    debug:
+      msg: "{{droplet_provision|json_query(public_ipv4_query)}}"
+    vars:
+      public_ipv4_query: "droplet.networks.v4[?type=='public'].ip_address"
+
   - name: provision instances
     doboto_droplet:
-      token: "{{ lookup('env','DOBOTO_TOKEN') }}"
       action: create
       names:
           - droplets-provision-01
@@ -41,3 +46,13 @@
   - name: List result
     debug:
       var: droplets_provision
+
+  - name: destroy instances
+    doboto_droplet:
+      action: destroy
+      tag: one
+    register: droplets_destroyed
+
+  - name: List result
+    debug:
+      var: droplets_destroyed
