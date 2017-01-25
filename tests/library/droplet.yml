@@ -1,9 +1,3 @@
-- name: destroy instances
-  doboto_droplet:
-    action: destroy
-    tag: one
-  register: droplets_destroyed
-
 - name: create droplet
   doboto_droplet:
     token: "{{ lookup('env','DO_API_TOKEN') }}"
@@ -12,7 +6,6 @@
     region: nyc3
     size: 1gb
     image: ubuntu-14-04-x64
-    ssh_keys: b5:ac:19:1a:8b:ba:7e:8c:8d:5d:a8:0c:fe:9f:9d:9e
     tags: one
     wait: True
   register: droplet_create
@@ -35,7 +28,6 @@
     region: nyc3
     size: 1gb
     image: ubuntu-14-04-x64
-    ssh_keys: b5:ac:19:1a:8b:ba:7e:8c:8d:5d:a8:0c:fe:9f:9d:9e
     tags: one
     wait: True
   register: droplet_present
@@ -64,7 +56,6 @@
     region: nyc3
     size: 1gb
     image: ubuntu-14-04-x64
-    ssh_keys: b5:ac:19:1a:8b:ba:7e:8c:8d:5d:a8:0c:fe:9f:9d:9e
     tags: one
     wait: True
   register: droplets_create
@@ -83,7 +74,6 @@
     region: nyc3
     size: 1gb
     image: ubuntu-14-04-x64
-    ssh_keys: b5:ac:19:1a:8b:ba:7e:8c:8d:5d:a8:0c:fe:9f:9d:9e
     tags: one
     wait: True
   register: droplets_present
@@ -103,7 +93,6 @@
     region: nyc3
     size: 1gb
     image: ubuntu-14-04-x64
-    ssh_keys: b5:ac:19:1a:8b:ba:7e:8c:8d:5d:a8:0c:fe:9f:9d:9e
     tags: one
     wait: True
   register: droplets_present_create
