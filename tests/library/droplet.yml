@@ -1,0 +1,123 @@
+- name: destroy instances
+  doboto_droplet:
+    action: destroy
+    tag: one
+  register: droplets_destroyed
+
+- name: create droplet
+  doboto_droplet:
+    token: "{{ lookup('env','DO_API_TOKEN') }}"
+    action: create
+    name: droplet-create
+    region: nyc3
+    size: 1gb
+    image: ubuntu-14-04-x64
+    ssh_keys: b5:ac:19:1a:8b:ba:7e:8c:8d:5d:a8:0c:fe:9f:9d:9e
+    tags: one
+    wait: True
+  register: droplet_create
+
+- name: List result
+  debug:
+    var: droplet_create
+
+- name: Display public IP address
+  debug:
+    msg: "{{droplet_create|json_query(public_ipv4_query)}}"
+  vars:
+    public_ipv4_query: "droplet.networks.v4[?type=='public'].ip_address | [0]"
+
+- name: present droplet
+  doboto_droplet:
+    token: "{{ lookup('env','DO_API_TOKEN') }}"
+    action: present
+    name: droplet-create
+    region: nyc3
+    size: 1gb
+    image: ubuntu-14-04-x64
+    ssh_keys: b5:ac:19:1a:8b:ba:7e:8c:8d:5d:a8:0c:fe:9f:9d:9e
+    tags: one
+    wait: True
+  register: droplet_present
+
+- name: List result
+  debug:
+    var: droplet_present
+
+- name: destroy droplet
+  doboto_droplet:
+    action: destroy
+    droplet_id: "{{droplet_present.droplet.id}}"
+  register: droplet_destroy
+
+- name: List result
+  debug:
+    var: droplet_destroy
+
+- name: create droplets
+  doboto_droplet:
+    action: create
+    names:
+        - droplets-create-01
+        - droplets-create-02
+        - droplets-create-03
+    region: nyc3
+    size: 1gb
+    image: ubuntu-14-04-x64
+    ssh_keys: b5:ac:19:1a:8b:ba:7e:8c:8d:5d:a8:0c:fe:9f:9d:9e
+    tags: one
+    wait: True
+  register: droplets_create
+
+- name: List result
+  debug:
+    var: droplets_create
+
+- name: present droplets
+  doboto_droplet:
+    action: present
+    names:
+        - droplets-create-01
+        - droplets-create-02
+        - droplets-create-03
+    region: nyc3
+    size: 1gb
+    image: ubuntu-14-04-x64
+    ssh_keys: b5:ac:19:1a:8b:ba:7e:8c:8d:5d:a8:0c:fe:9f:9d:9e
+    tags: one
+    wait: True
+  register: droplets_present
+
+- name: List result
+  debug:
+    var: droplets_present
+
+- name: present droplets
+  doboto_droplet:
+    action: present
+    names:
+        - droplets-create-02
+        - droplets-create-03
+        - droplets-create-04
+        - droplets-create-05
+    region: nyc3
+    size: 1gb
+    image: ubuntu-14-04-x64
+    ssh_keys: b5:ac:19:1a:8b:ba:7e:8c:8d:5d:a8:0c:fe:9f:9d:9e
+    tags: one
+    wait: True
+  register: droplets_present_create
+
+- name: List result
+  debug:
+    var: droplets_present_create
+
+- name: destroy instances
+  doboto_droplet:
+    action: destroy
+    tag: one
+  register: droplets_destroyed
+
+- name: List result
+  debug:
+    var: droplets_destroyed
