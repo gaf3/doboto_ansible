@@ -1,0 +1,122 @@
+- name: ensure no existing files
+  file:
+    path: "{{ item }}"
+    state: absent
+  with_items:
+    - /tmp/id_doboto
+    - /tmp/id_doboto.pub
+
+- name: generate key
+  command: ssh-keygen -t rsa -P "" -C "doboto@digitalocean.com" -f /tmp/id_doboto
+
+- name: generate fingerprint
+  command: ssh-keygen -lf /tmp/id_doboto.pub
+  register: key_list
+
+- name: create ssh key
+  doboto_ssh_key:
+    action: create
+    name: ssh-key-create
+    public_key: "{{ lookup('file', '/tmp/id_doboto.pub') }}"
+  register: ssh_key_create
+
+- name: verify create
+  assert:
+    that:
+      - "{{ ssh_key_create.ssh_key.name == 'ssh-key-create' }}"
+      - "{{ ssh_key_create.ssh_key.public_key == lookup('file', '/tmp/id_doboto.pub') }}"
+      - "{{ ssh_key_create.ssh_key.fingerprint == key_list.stdout.split()[1] }}"
+    msg: "{{ ssh_key_create }}"
+
+- name: list ssh keys
+  doboto_ssh_key:
+    action: list
+  register: ssh_key_list
+
+- name: verify list
+  assert:
+    that:
+      - "{{ ssh_key_list|json_query(ssh_key_create_query) == ssh_key_create.ssh_key.id }}"
+    msg: "{{ ssh_key_list }}"
+  vars:
+    ssh_key_create_query: "ssh_keys[?name=='ssh-key-create'].id | [0]"
+
+- name: info ssh key by id
+  doboto_ssh_key:
+    action: info
+    id: "{{ ssh_key_create.ssh_key.id }}"
+  register: ssh_key_id_info
+
+- name: verify info by id
+  assert:
+    that:
+      - "{{ ssh_key_create.ssh_key == ssh_key_id_info.ssh_key }}"
+    msg: "{{ ssh_key_id_info }}"
+
+- name: info ssh key by fingerprint
+  doboto_ssh_key:
+    action: info
+    fingerprint: "{{ ssh_key_create.ssh_key.fingerprint }}"
+  register: ssh_key_fingerprint_info
+
+- name: verify info by fingerprint
+  assert:
+    that:
+      - "{{ ssh_key_create.ssh_key == ssh_key_fingerprint_info.ssh_key }}"
+    msg: "{{ ssh_key_fingerprint_info }}"
+
+- name: update ssh key by id
+  doboto_ssh_key:
+    action: update
+    id: "{{ ssh_key_create.ssh_key.id }}"
+    name: ssh-key-id-update
+  register: ssh_key_id_update
+
+- name: verify update by id
+  assert:
+    that:
+      - "{{ ssh_key_id_update.ssh_key.name == 'ssh-key-id-update' }}"
+    msg: "{{ ssh_key_id_update }}"
+
+- name: update ssh key by fingerprint
+  doboto_ssh_key:
+    action: update
+    fingerprint: "{{ ssh_key_create.ssh_key.fingerprint }}"
+    name: ssh-key-fingerprint-update
+  register: ssh_key_fingerprint_update
+
+- name: verify update by fingerprint
+  assert:
+    that:
+      - "{{ ssh_key_fingerprint_update.ssh_key.name == 'ssh-key-fingerprint-update' }}"
+    msg: "{{ ssh_key_fingerprint_update }}"
+
+- name: destroy by id
+  doboto_ssh_key:
+    action: destroy
+    id: "{{ ssh_key_create.ssh_key.id }}"
+  register: ssh_key_id_destroy
+
+- name: verify destroy by id
+  assert:
+    that:
+      - "{{ ssh_key_id_destroy.result.status == 204 }}"
+    msg: "{{ ssh_key_id_destroy }}"
+
+- name: create ssh key again for fingerprint delete
+  doboto_ssh_key:
+    action: create
+    name: ssh-key-create-fingerprint
+    public_key: "{{ lookup('file', '/tmp/id_doboto.pub') }}"
+
+- name: destroy by fingerprint
+  doboto_ssh_key:
+    action: destroy
+    fingerprint: "{{ key_list.stdout.split()[1] }}"
+  register: ssh_key_fingerprint_destroy
+
+- name: verify destroy by fingerprint
+  assert:
+    that:
+      - "{{ ssh_key_fingerprint_destroy.result.status == 204 }}"
+    msg: "{{ ssh_key_fingerprint_destroy }}"

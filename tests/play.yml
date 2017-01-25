@@ -1,0 +1,12 @@
+- hosts: all
+  connection: local
+  vars:
+     ansible_python_interpreter: "/usr/bin/python"
+  gather_facts: false
+  tasks:
+
+  - include: library/ssh_key.yml
+    tags: ssh_key
+
+  - include: library/droplet.yml
+    tags: droplet
