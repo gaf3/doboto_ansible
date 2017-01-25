@@ -1,0 +1,32 @@
+- name: list droplets
+  doboto_droplet:
+    action: list
+  register: clear_droplets
+
+- name: clear droplets
+  doboto_droplet:
+    action: destroy
+    droplet_id: "{{ item.id }}"
+  with_items: "{{ clear_droplets.droplets }}"
+
+- name: list ssh keys
+  doboto_ssh_key:
+    action: list
+  register: clear_ssh_keys
+
+- name: clear ssh keys
+  doboto_ssh_key:
+    action: destroy
+    id: "{{ item.id }}"
+  with_items: "{{ clear_ssh_keys.ssh_keys }}"
+
+- name: list tags
+  doboto_tag:
+    action: list
+  register: clear_tags
+
+- name: clear tags
+  doboto_tag:
+    action: destroy
+    tag_name: "{{ item.name }}"
+  with_items: "{{ clear_tags.tags }}"

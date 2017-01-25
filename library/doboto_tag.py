@@ -3,7 +3,7 @@
 
 """
 
-Ansible module to manage DigitalOcean ssh keys
+Ansible module to manage DigitalOcean tags
 (c) 2017, Gaffer Fitch <gfitch@digitalocean.com>
 
 This file is part of Ansible
@@ -23,11 +23,11 @@ along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 
 DOCUMENTATION = '''
 ---
-module: doboto_ssh_key
+module: doboto_tag
 
-short_description: Manage DigitalOcean SSH Keys
+short_description: Manage DigitalOcean Tags
 description:
-    - Manages DigitalOcean ssh keys
+    - Manages DigitalOcean tags
 version_added: "0.1"
 author: "Gaffer Fitch <gfitch@digitalocean.com>"
 options:
@@ -38,20 +38,19 @@ options:
         ssh key action
         choices:
             - create
-            - list
             - info
+            - list
             - update
+            - attach
+            - detach
             - destroy
-    id:
+    tag_name:
         description:
-            - (SSH Key ID) same as DO API variable
+            - same as DO API variable, always used as the id of the tag
     name:
         description:
-            - same as DO API variable
-    public_key:
-        description:
-            - same as DO API variable
-    fingerprint:
+            - same as DO API variable, always used to set the name of of the tag
+    resources:
         description:
             - same as DO API variable
     url:
@@ -78,74 +77,111 @@ def create(do, module):
     if module.params["name"] is None:
         module.fail_json(msg="the name parameter is required")
 
-    if module.params["public_key"] is None:
-        module.fail_json(msg="the public_key parameter is required")
+    result = do.tag.create(module.params["name"])
 
-    result = do.ssh_key.create(module.params["name"], module.params["public_key"])
-
-    if "ssh_key" not in result:
+    if "tag" not in result:
         module.fail_json(msg="DO API error", result=result)
 
-    module.exit_json(changed=True, ssh_key=result['ssh_key'])
-
-
-def list(do, module):
-
-    result = do.ssh_key.list()
-
-    if "ssh_keys" not in result:
-        module.fail_json(msg="DO API error", result=result)
-
-    module.exit_json(changed=True, ssh_keys=result["ssh_keys"])
+    module.exit_json(changed=True, tag=result['tag'])
 
 
 def info(do, module):
 
     result = None
 
-    if module.params["id"] is not None:
-        result = do.ssh_key.info(module.params["id"])
-    elif module.params["fingerprint"] is not None:
-        result = do.ssh_key.info(module.params["fingerprint"])
-    else:
-        module.fail_json(msg="the id or fingerprint parameter is required")
+    if module.params["tag_name"] is None:
+        module.fail_json(msg="the tag_name parameter is required")
 
-    if "ssh_key" not in result:
+    result = do.tag.info(module.params["tag_name"])
+
+    if "tag" not in result:
         module.fail_json(msg="DO API error", result=result)
 
-    module.exit_json(changed=True, ssh_key=result["ssh_key"])
+    module.exit_json(changed=True, tag=result['tag'])
+
+
+def list(do, module):
+
+    result = do.tag.list()
+
+    if "tags" not in result:
+        module.fail_json(msg="DO API error", result=result)
+
+    module.exit_json(changed=True, tags=result["tags"])
+
+
+def names(do, module):
+
+    result = do.tag.names()
+
+    if "tags" not in result:
+        module.fail_json(msg="DO API error", result=result)
+
+    module.exit_json(changed=True, tags=result["tags"])
 
 
 def update(do, module):
 
     result = None
 
+    if module.params["tag_name"] is None:
+        module.fail_json(msg="the tag_name parameter is required")
+
     if module.params["name"] is None:
         module.fail_json(msg="the name parameter is required")
 
-    if module.params["id"] is not None:
-        result = do.ssh_key.update(module.params["id"], module.params["name"])
-    elif module.params["fingerprint"] is not None:
-        result = do.ssh_key.update(module.params["fingerprint"], module.params["name"])
-    else:
-        module.fail_json(msg="the id or fingerprint parameter is required")
+    result = do.tag.update(module.params["tag_name"], module.params["name"])
 
-    if "ssh_key" not in result:
+    if "tag" not in result:
         module.fail_json(msg="DO API error", result=result)
 
-    module.exit_json(changed=True, ssh_key=result["ssh_key"])
+    module.exit_json(changed=True, tag=result['tag'])
+
+
+def attach(do, module):
+
+    result = None
+
+    if module.params["tag_name"] is None:
+        module.fail_json(msg="the tag_name parameter is required")
+
+    if module.params["resources"] is None:
+        module.fail_json(msg="the resources parameter is required")
+
+    result = do.tag.attach(module.params["tag_name"], module.params["resources"])
+
+    if "status" not in result:
+        module.fail_json(msg="DO API error", result=result)
+
+    module.exit_json(changed=True, result=result)
+
+
+def detach(do, module):
+
+    result = None
+
+    if module.params["tag_name"] is None:
+        module.fail_json(msg="the tag_name parameter is required")
+
+    if module.params["resources"] is None:
+        module.fail_json(msg="the resources parameter is required")
+
+    result = do.tag.detach(module.params["tag_name"], module.params["resources"])
+
+    if "status" not in result:
+        module.fail_json(msg="DO API error", result=result)
+
+    module.exit_json(changed=True, result=result)
 
 
 def destroy(do, module):
 
     result = None
 
-    if module.params["id"] is not None:
-        result = do.ssh_key.destroy(module.params["id"])
-    elif module.params["fingerprint"] is not None:
-        result = do.ssh_key.destroy(module.params["fingerprint"])
-    else:
-        module.fail_json(msg="the id or fingerprint parameter is required")
+    if module.params["tag_name"] is None:
+        module.fail_json(msg="the tag_name parameter is required")
+
+    result = do.tag.destroy(module.params["tag_name"])
 
     if "status" not in result:
         module.fail_json(msg="DO API error", result=result)
@@ -158,13 +194,18 @@ def main():
     module = AnsibleModule(
         argument_spec = dict(
             action=dict(default=None, required=True, choices=[
-                "create", "list", "info", "update", "destroy"
+                "create",
+                "info",
+                "list",
+                "update",
+                "attach",
+                "detach",
+                "destroy"
             ]),
             token=dict(default=None),
-            id=dict(default=None),
-            fingerprint=dict(default=None),
-            public_key=dict(default=None),
+            tag_name=dict(default=None),
             name=dict(default=None),
+            resources=dict(default=None, type='list'),
             url=dict(default="https://api.digitalocean.com/v2"),
         )
     )
@@ -184,12 +225,16 @@ def main():
 
     if module.params["action"] == "create":
         create(do, module)
-    elif module.params["action"] == "list":
-        list(do, module)
     elif module.params["action"] == "info":
         info(do, module)
+    elif module.params["action"] == "list":
+        list(do, module)
     elif module.params["action"] == "update":
         update(do, module)
+    elif module.params["action"] == "attach":
+        attach(do, module)
+    elif module.params["action"] == "detach":
+        detach(do, module)
     elif module.params["action"] == "destroy":
         destroy(do, module)
 

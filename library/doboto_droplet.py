@@ -39,6 +39,8 @@ options:
         choices:
             - create
             - present
+            - list
+            - info
             - destroy
     name:
         description:
@@ -98,9 +100,6 @@ options:
 '''
 
 EXAMPLES = '''
-# Create a droplet
-- doboto_droplet: action=create
-
 '''
 
 import os
@@ -234,6 +233,31 @@ def present(do, module):
             create(do, module, existing)
 
 
+def list(do, module):
+
+    result = do.droplet.list()
+
+    if "droplets" not in result:
+        module.fail_json(msg="DO API error", result=result)
+
+    module.exit_json(changed=True, droplets=result["droplets"])
+
+
+def info(do, module):
+
+    result = None
+
+    if module.params["droplet_id"] is None:
+        module.fail_json(msg="the droplet_id is required")
+
+    result = do.droplet.info(module.params["droplet_id"])
+
+    if "droplet" not in result:
+        module.fail_json(msg="DO API error", result=result)
+
+    module.exit_json(changed=True, droplet=result["droplet"])
+
+
 def destroy(do, module):
 
     result = None
@@ -254,7 +278,9 @@ def main():
 
     module = AnsibleModule(
         argument_spec = dict(
-            action=dict(default=None, required=True, choices=["create", "present", "destroy"]),
+            action=dict(default=None, required=True, choices=[
+                "create", "present", "list", "info", "destroy"
+            ]),
             token=dict(default=None),
             name=dict(default=None),
             names=dict(default=None, type='list'),
@@ -293,8 +319,12 @@ def main():
 
     if module.params["action"] == "create":
         create(do, module)
-    if module.params["action"] == "present":
+    elif module.params["action"] == "present":
         present(do, module)
+    elif module.params["action"] == "list":
+        list(do, module)
+    elif module.params["action"] == "info":
+        info(do, module)
     elif module.params["action"] == "destroy":
         destroy(do, module)
 

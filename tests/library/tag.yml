@@ -1,0 +1,123 @@
+- name: create tag
+  doboto_tag:
+    action: create
+    name: tag-create
+  register: tag_create
+
+- name: verify create
+  assert:
+    that:
+      - "{{ tag_create.tag.name == 'tag-create' }}"
+    msg: "{{ tag_create }}"
+
+- name: info tag
+  doboto_tag:
+    action: info
+    tag_name: tag-create
+  register: tag_info
+
+- name: verify info
+  assert:
+    that:
+      - "{{ tag_info.tag == tag_create.tag }}"
+    msg: "{{ tag_info }}"
+
+- name: list tags
+  doboto_tag:
+    action: list
+  register: tag_list
+
+- name: verify list
+  assert:
+    that:
+      - "{{ tag_list|json_query(tag_create_query) == 'tag-create' }}"
+    msg: "{{ tag_list }}"
+  vars:
+    tag_create_query: "tags[?name=='tag-create'].name | [0]"
+
+- name: update tag
+  doboto_tag:
+    action: update
+    tag_name: tag-create
+    name: tag-update
+
+- name: reload tag
+  doboto_tag:
+    action: info
+    tag_name: tag-update
+  register: tag_update
+
+- name: verify update
+  assert:
+    that:
+      - "{{ tag_update.tag.name == 'tag-update' }}"
+    msg: "{{ tag_update }}"
+
+- name: create droplet
+  doboto_droplet:
+    action: create
+    name: tag-droplet
+    region: nyc3
+    size: 1gb
+    image: ubuntu-14-04-x64
+    wait: true
+  register: tag_droplet
+
+- name: attach to a droplet
+  doboto_tag:
+    action: attach
+    tag_name: tag-update
+    resources:
+      -
+        resource_id: "{{ tag_droplet.droplet.id }}"
+        resource_type: "droplet"
+
+- name: reload droplet
+  doboto_droplet:
+    action: info
+    droplet_id: "{{ tag_droplet.droplet.id }}"
+  register: droplet_attach
+
+- name: verify attach
+  assert:
+    that:
+      - "{{ droplet_attach.droplet.tags == ['tag-update'] }}"
+    msg: "{{ droplet_attach }}"
+
+- name: detach from a droplet
+  doboto_tag:
+    action: detach
+    tag_name: tag-update
+    resources:
+      -
+        resource_id: "{{ tag_droplet.droplet.id }}"
+        resource_type: "droplet"
+
+- name: reload droplet
+  doboto_droplet:
+    action: info
+    droplet_id: "{{ tag_droplet.droplet.id }}"
+  register: droplet_detach
+
+- name: verify detach
+  assert:
+    that:
+      - "{{ droplet_detach.droplet.tags == [] }}"
+    msg: "{{ droplet_detach }}"
+
+- name: destroy droplet
+  doboto_droplet:
+    action: destroy
+    droplet_id: "{{ tag_droplet.droplet.id }}"
+
+- name: destroy
+  doboto_tag:
+    action: destroy
+    tag_name: tag-update
+  register: tag_destroy
+
+- name: verify destroy
+  assert:
+    that:
+      - "{{ tag_destroy.result.status == 204 }}"
+    msg: "{{ tag_destroy }}"
