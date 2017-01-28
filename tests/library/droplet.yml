@@ -1,4 +1,4 @@
-- name: create droplet
+- name: droplet | create | simple
   doboto_droplet:
     token: "{{ lookup('env','DO_API_TOKEN') }}"
     action: create
@@ -6,107 +6,258 @@
     region: nyc3
     size: 1gb
     image: ubuntu-14-04-x64
-    tags: one
-    wait: True
   register: droplet_create
 
-- name: List result
-  debug:
-    var: droplet_create
+- name: droplet | create | simple | verify
+  assert:
+    that:
+      - "{{ droplet_create.droplet.name == 'droplet-create' }}"
+      - "{{ droplet_create.droplet.region.slug == 'nyc3' }}"
+      - "{{ droplet_create.droplet.size.slug == '1gb' }}"
+      - "{{ droplet_create.droplet.image.slug == 'ubuntu-14-04-x64' }}"
+      - "{{ droplet_create.droplet.tags == [] }}"
+      - "{{ droplet_create.droplet.volume_ids == [] }}"
+    msg: "{{ droplet_create }}"
 
-- name: Display public IP address
+- name: droplet | create | multiple
+  doboto_droplet:
+    action: create
+    names:
+      - droplet-create-01
+      - droplet-create-02
+      - droplet-create-03
+    region: nyc3
+    size: 1gb
+    image: ubuntu-14-04-x64
+  register: droplets_create
+
+- name: droplet | create | multiple | verify
+  assert:
+    that:
+      - "{{ droplets_create.droplets[0].name == 'droplet-create-01' }}"
+      - "{{ droplets_create.droplets[1].name == 'droplet-create-02' }}"
+      - "{{ droplets_create.droplets[2].name == 'droplet-create-03' }}"
+    msg: "{{ droplets_create }}"
+
+- name: droplet | present | simple | exists
+  doboto_droplet:
+    action: present
+    name: droplet-create
+    region: nyc3
+    size: 1gb
+    image: ubuntu-14-04-x64
+  register: droplet_present_exists
+
+- name: droplet | present | simple | verify
+  assert:
+    that:
+      - "{{ droplet_present_exists.droplet.name == 'droplet-create' }}"
+      - "{{ droplet_present_exists.droplet.region.slug == 'nyc3' }}"
+      - "{{ droplet_present_exists.droplet.size.slug == '1gb' }}"
+      - "{{ droplet_present_exists.droplet.image.slug == 'ubuntu-14-04-x64' }}"
+      - "{{ droplet_present_exists.droplet.tags == [] }}"
+      - "{{ droplet_present_exists.droplet.volume_ids == [] }}"
+    msg: "{{ droplet_present_exists }}"
+
+- name: droplet | ssh_key | file
+  command: ssh-keygen -t rsa -P "" -C "doboto@digitalocean.com" -f /tmp/id_doboto
+
+- name: droplet | ssh_key | create
+  doboto_ssh_key:
+    action: create
+    name: droplet-ssh-key
+    public_key: "{{ lookup('file', '/tmp/id_doboto.pub') }}"
+  register: droplet_ssh_key
+
+- name: droplet | present | complex | new
+  doboto_droplet:
+    action: present
+    name: droplet-present
+    region: nyc3
+    size: 2gb
+    image: ubuntu-14-04-x64
+    ssh_keys: "{{ droplet_ssh_key.ssh_key.id }}"
+    backups: true
+    ipv6: true
+    private_networking: true
+    user_data: "stuff"
+    tags: one
+    wait: true
+  register: droplet_present_new
+
+- name: droplet | present | complex | verify
+  assert:
+    that:
+      - "{{ droplet_present_new.droplet.name == 'droplet-present' }}"
+      - "{{ droplet_present_new.droplet.region.slug == 'nyc3' }}"
+      - "{{ droplet_present_new.droplet.size.slug == '2gb' }}"
+      - "{{ droplet_present_new.droplet.image.slug == 'ubuntu-14-04-x64' }}"
+      - "{{ droplet_present_new.droplet.tags == ['one'] }}"
+      - "{{ droplet_present_new.droplet.volume_ids == [] }}"
+      - "{{ droplet_present_new.droplet.next_backup_window | length == 2 }}"
+      - "{{ droplet_present_new.droplet.networks.v6 | length == 1 }}"
+      - "{{ droplet_present_new.droplet.networks.v4 | length == 2 }}"
+    msg: "{{ droplet_present_new }}"
+
+- name: droplet | present | complex | public ipv4 address
   debug:
-    msg: "{{droplet_create|json_query(public_ipv4_query)}}"
+    msg: "{{droplet_present_new|json_query(public_ipv4_query)}}"
   vars:
     public_ipv4_query: "droplet.networks.v4[?type=='public'].ip_address | [0]"
 
-- name: present droplet
+- name: droplet | present | complex | private ipv4 address
+  debug:
+    msg: "{{droplet_present_new|json_query(private_ipv4_query)}}"
+  vars:
+    private_ipv4_query: "droplet.networks.v4[?type=='private'].ip_address | [0]"
+
+- name: droplet | present | complex | public ipv6 address
+  debug:
+    msg: "{{droplet_present_new|json_query(public_ipv6_query)}}"
+  vars:
+    public_ipv6_query: "droplet.networks.v6[?type=='public'].ip_address | [0]"
+
+- name: droplet | present | multiple | exists
   doboto_droplet:
-    token: "{{ lookup('env','DO_API_TOKEN') }}"
     action: present
-    name: droplet-create
+    names:
+      - droplet-create-01
+      - droplet-create-02
+      - droplet-create-03
     region: nyc3
     size: 1gb
     image: ubuntu-14-04-x64
-    tags: one
-    wait: True
-  register: droplet_present
+  register: droplets_present_exists
 
-- name: List result
-  debug:
-    var: droplet_present
+- name: droplet | present | multiple | exists | verify
+  assert:
+    that:
+      - "{{ droplets_present_exists.droplets[0].name == 'droplet-create-01' }}"
+      - "{{ droplets_present_exists.droplets[1].name == 'droplet-create-02' }}"
+      - "{{ droplets_present_exists.droplets[2].name == 'droplet-create-03' }}"
+    msg: "{{ droplets_present_exists }}"
 
-- name: destroy droplet
+- name: droplet | present | multiple | new
+  doboto_droplet:
+    action: present
+    names:
+      - droplet-create-04
+      - droplet-create-05
+    region: nyc3
+    size: 1gb
+    image: ubuntu-14-04-x64
+    wait: true
+    tags: some
+  register: droplets_present_new
+
+- name: droplet | present | multiple | new | verify
+  assert:
+    that:
+      - "{{ droplets_present_new.droplets[0].name == 'droplet-create-04' }}"
+      - "{{ droplets_present_new.droplets[1].name == 'droplet-create-05' }}"
+    msg: "{{ droplets_present_new }}"
+
+- name: droplet | present | multiple | mixed
+  doboto_droplet:
+    action: present
+    names:
+      - droplet-create-04
+      - droplet-create-05
+      - droplet-create-06
+    region: nyc3
+    size: 1gb
+    image: ubuntu-14-04-x64
+    wait: true
+    tags: some
+  register: droplets_present_mixed
+
+- name: droplet | present | multiple | mixed | verify
+  assert:
+    that:
+      - "{{ droplets_present_mixed.droplets[0].name == 'droplet-create-04' }}"
+      - "{{ droplets_present_mixed.droplets[1].name == 'droplet-create-05' }}"
+      - "{{ droplets_present_mixed.droplets[2].name == 'droplet-create-06' }}"
+    msg: "{{ droplets_present_mixed }}"
+
+- name: droplet | list
+  doboto_droplet:
+    action: list
+  register: droplets_list
+
+- name: droplet | list | verify
+  assert:
+    that:
+      - "{{ droplets_list.droplets|length == 8 }}"
+      - "{{ droplets_list|json_query(droplet_create_query) == droplet_create.droplet.id }}"
+      - "{{ droplets_list|json_query(droplet_create_01_query) == droplets_create.droplets[0].id }}"
+      - "{{ droplets_list|json_query(droplet_create_02_query) == droplets_create.droplets[1].id }}"
+      - "{{ droplets_list|json_query(droplet_create_03_query) == droplets_create.droplets[2].id }}"
+      - "{{ droplets_list|json_query(droplet_present_query) == droplet_present_new.droplet.id }}"
+      - "{{ droplets_list|json_query(droplet_create_04_query) == droplets_present_new.droplets[0].id }}"
+      - "{{ droplets_list|json_query(droplet_create_05_query) == droplets_present_new.droplets[1].id }}"
+      - "{{ droplets_list|json_query(droplet_create_06_query) == droplets_present_mixed.droplets[2].id }}"
+    msg: "{{ droplets_list }}"
+  vars:
+    droplet_create_query: "droplets[?name=='droplet-create'].id | [0]"
+    droplet_create_01_query: "droplets[?name=='droplet-create-01'].id | [0]"
+    droplet_create_02_query: "droplets[?name=='droplet-create-02'].id | [0]"
+    droplet_create_03_query: "droplets[?name=='droplet-create-03'].id | [0]"
+    droplet_present_query: "droplets[?name=='droplet-present'].id | [0]"
+    droplet_create_04_query: "droplets[?name=='droplet-create-04'].id | [0]"
+    droplet_create_05_query: "droplets[?name=='droplet-create-05'].id | [0]"
+    droplet_create_06_query: "droplets[?name=='droplet-create-06'].id | [0]"
+
+- name: droplet | list | tag
+  doboto_droplet:
+    action: list
+    tag_name: some
+  register: droplets_list_tag
+
+- name: droplet | list | tag | verify
+  assert:
+    that:
+      - "{{ droplets_list_tag.droplets|length == 3 }}"
+      - "{{ droplets_list_tag|json_query(droplet_create_04_query) == droplets_present_new.droplets[0].id }}"
+      - "{{ droplets_list_tag|json_query(droplet_create_05_query) == droplets_present_new.droplets[1].id }}"
+      - "{{ droplets_list_tag|json_query(droplet_create_06_query) == droplets_present_mixed.droplets[2].id }}"
+    msg: "{{ droplets_list_tag }}"
+  vars:
+    droplet_create_04_query: "droplets[?name=='droplet-create-04'].id | [0]"
+    droplet_create_05_query: "droplets[?name=='droplet-create-05'].id | [0]"
+    droplet_create_06_query: "droplets[?name=='droplet-create-06'].id | [0]"
+
+- name: droplet | info
+  doboto_droplet:
+    action: info
+    id: "{{ droplet_create.droplet.id }}"
+  register: droplet_info
+
+- name: droplet | info | verify
+  assert:
+    that:
+      - "{{ droplet_info.droplet.name == 'droplet-create' }}"
+    msg: "{{ droplet_info }}"
+
+- name: droplet | destroy | by id
   doboto_droplet:
     action: destroy
-    droplet_id: "{{droplet_present.droplet.id}}"
-  register: droplet_destroy
+    id: "{{ droplet_create.droplet.id }}"
+  register: droplet_id_destroy
 
-- name: List result
-  debug:
-    var: droplet_destroy
+- name: droplet | destroy | by id | verify
+  assert:
+    that:
+      - "{{ droplet_id_destroy.result.status == 204 }}"
+    msg: "{{ droplet_id_destroy }}"
 
-- name: create droplets
-  doboto_droplet:
-    action: create
-    names:
-        - droplets-create-01
-        - droplets-create-02
-        - droplets-create-03
-    region: nyc3
-    size: 1gb
-    image: ubuntu-14-04-x64
-    tags: one
-    wait: True
-  register: droplets_create
-
-- name: List result
-  debug:
-    var: droplets_create
-
-- name: present droplets
-  doboto_droplet:
-    action: present
-    names:
-        - droplets-create-01
-        - droplets-create-02
-        - droplets-create-03
-    region: nyc3
-    size: 1gb
-    image: ubuntu-14-04-x64
-    tags: one
-    wait: True
-  register: droplets_present
-
-- name: List result
-  debug:
-    var: droplets_present
-
-- name: present droplets
-  doboto_droplet:
-    action: present
-    names:
-        - droplets-create-02
-        - droplets-create-03
-        - droplets-create-04
-        - droplets-create-05
-    region: nyc3
-    size: 1gb
-    image: ubuntu-14-04-x64
-    tags: one
-    wait: True
-  register: droplets_present_create
-
-- name: List result
-  debug:
-    var: droplets_present_create
-
-- name: destroy instances
+- name: droplet | destroy | by tag
   doboto_droplet:
     action: destroy
-    tag: one
-  register: droplets_destroyed
+    tag_name: some
+  register: droplet_tag_destroy
 
-- name: List result
-  debug:
-    var: droplets_destroyed
+- name: droplet | destroy | by tag | verify
+  assert:
+    that:
+      - "{{ droplet_tag_destroy.result.status == 204 }}"
+    msg: "{{ droplet_tag_destroy }}"
