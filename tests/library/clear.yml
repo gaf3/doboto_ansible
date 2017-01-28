@@ -49,5 +49,5 @@
 - name: clear | tags | destroy
   doboto_tag:
     action: destroy
-    tag_name: "{{ item.name }}"
+    name: "{{ item.name }}"
   with_items: "{{ clear_tags.tags }}"

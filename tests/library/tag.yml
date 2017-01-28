@@ -11,10 +11,34 @@
       - "{{ tag_create.tag.name == 'tag-create' }}"
     msg: "{{ tag_create }}"
 
+- name: tag | present | exists
+  doboto_tag:
+    action: present
+    name: tag-create
+  register: tag_present_exists
+
+- name: tag | present | exists | verify
+  assert:
+    that:
+      - "{{ tag_present_exists.tag.name == 'tag-create' }}"
+    msg: "{{ tag_present_exists }}"
+
+- name: tag | present | new
+  doboto_tag:
+    action: present
+    name: tag-present
+  register: tag_present_new
+
+- name: tag | present | new | verify
+  assert:
+    that:
+      - "{{ tag_present_new.tag.name == 'tag-present' }}"
+    msg: "{{ tag_present_new }}"
+
 - name: tag | info
   doboto_tag:
     action: info
-    tag_name: tag-create
+    name: tag-create
   register: tag_info
 
 - name: tag | info | verify
@@ -39,13 +63,13 @@
 - name: tag | update
   doboto_tag:
     action: update
-    tag_name: tag-create
-    name: tag-update
+    name: tag-create
+    new_name: tag-update
 
 - name: tag | update | reload
   doboto_tag:
     action: info
-    tag_name: tag-update
+    name: tag-update
   register: tag_update
 
 - name: tag | update | verify
@@ -57,7 +81,10 @@
 - name: tag | attach | create
   doboto_droplet:
     action: create
-    name: tag-droplet
+    names:
+      - tag-droplet-01
+      - tag-droplet-02
+      - tag-droplet-03
     region: nyc3
     size: 1gb
     image: ubuntu-14-04-x64
@@ -67,16 +94,14 @@
 - name: tag | attach | droplet
   doboto_tag:
     action: attach
-    tag_name: tag-update
-    resources:
-      -
-        resource_id: "{{ tag_droplet.droplet.id }}"
-        resource_type: "droplet"
+    name: tag-update
+    resource_type: "droplet"
+    resource_id: "{{ tag_droplet.droplets[0].id }}"
 
 - name: tag | attach | reload
   doboto_droplet:
     action: info
-    id: "{{ tag_droplet.droplet.id }}"
+    id: "{{ tag_droplet.droplets[0].id }}"
   register: droplet_attach
 
 - name: tag | attach | verify
@@ -85,31 +110,98 @@
       - "{{ droplet_attach.droplet.tags == ['tag-update'] }}"
     msg: "{{ droplet_attach }}"
 
+- name: tag | attach | new | droplet
+  doboto_tag:
+    action: "{{item}}"
+    name: tag-new
+    resources:
+      -
+        resource_type: "droplet"
+        resource_id: "{{ tag_droplet.droplets[0].id }}"
+  with_items:
+    - present
+    - attach
+
+- name: tag | attach | new | reload
+  doboto_droplet:
+    action: info
+    id: "{{ tag_droplet.droplets[0].id }}"
+  register: droplet_attach_new
+
+- name: tag | attach | new | verify
+  assert:
+    that:
+      - "{{ droplet_attach_new.droplet.tags|sort == ['tag-new', 'tag-update'] }}"
+    msg: "{{ droplet_attach_new }}"
+
+- name: tag | attach | multiple | droplet
+  doboto_tag:
+    action: "{{item}}"
+    name: tag-multi
+    resource_type: "droplet"
+    resource_ids: "{{tag_droplet|json_query(tag_droplet_ids_query)}}"
+  with_items:
+    - present
+    - attach
+  vars:
+    tag_droplet_ids_query: "droplets[].id"
+
+- name: tag | attach | multiple | reload
+  doboto_droplet:
+    action: list
+    tag_name: tag-multi
+  register: droplet_attach_multi
+
+- name: tag | attach | multiple | verify
+  assert:
+    that:
+      - "{{ droplet_attach_multi.droplets|length == 3 }}"
+    msg: "{{ droplet_attach_multi }}"
+
 - name: tag | detach | droplet
   doboto_tag:
     action: detach
-    tag_name: tag-update
-    resources:
-      -
-        resource_id: "{{ tag_droplet.droplet.id }}"
-        resource_type: "droplet"
+    name: tag-update
+    resource_type: "droplet"
+    resource_id: "{{ tag_droplet.droplets[0].id }}"
 
 - name: tag | detach | reload
   doboto_droplet:
     action: info
-    id: "{{ tag_droplet.droplet.id }}"
+    id: "{{ tag_droplet.droplets[0].id }}"
   register: droplet_detach
 
 - name: tag | detach | verify
   assert:
     that:
-      - "{{ droplet_detach.droplet.tags == [] }}"
+      - "{{ droplet_detach.droplet.tags|sort == ['tag-multi', 'tag-new'] }}"
+    msg: "{{ droplet_detach }}"
+
+- name: tag | detach | droplet | resources
+  doboto_tag:
+    action: detach
+    name: tag-new
+    resources:
+      -
+        resource_type: "droplet"
+        resource_id: "{{ tag_droplet.droplets[0].id }}"
+
+- name: tag | detach | reload | resources
+  doboto_droplet:
+    action: info
+    id: "{{ tag_droplet.droplets[0].id }}"
+  register: droplet_detach
+
+- name: tag | detach | verify | resources
+  assert:
+    that:
+      - "{{ droplet_detach.droplet.tags == ['tag-multi'] }}"
     msg: "{{ droplet_detach }}"
 
 - name: tag | destroy
   doboto_tag:
     action: destroy
-    tag_name: tag-update
+    name: tag-update
   register: tag_destroy
 
 - name: tag | destroy | verify

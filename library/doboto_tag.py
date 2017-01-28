@@ -38,21 +38,31 @@ options:
         ssh key action
         choices:
             - create
+            - present
             - info
             - list
             - update
             - attach
             - detach
             - destroy
-    tag_name:
-        description:
-            - same as DO API variable, always used as the id of the tag
     name:
         description:
-            - same as DO API variable, always used to set the name of of the tag
+            - same as DO API variable
+    new_name:
+        description:
+            - same as DO API variable, new name for updating
     resources:
         description:
             - same as DO API variable
+    resource_type:
+        description:
+            - same as DO API variable, use if doing a single resource type
+    resource_id:
+        description:
+            - same as DO API variable, use if doing a single resource id
+    resource_ids:
+        description:
+            - paired with a single resource_type to build a resources list
     url:
         description:
             - URL to use if not official (for experimenting)
@@ -62,6 +72,7 @@ EXAMPLES = '''
 '''
 
 import os
+import copy
 from ansible.module_utils.basic import *
 
 try:
@@ -85,14 +96,38 @@ def create(do, module):
     module.exit_json(changed=True, tag=result['tag'])
 
 
+def present(do, module):
+
+    if module.params["name"] is None:
+        module.fail_json(msg="the name parameter is required")
+
+    result = do.tag.list()
+
+    if "tags" not in result:
+        module.fail_json(msg="DO API error", result=result)
+
+    tags = result["tags"]
+
+    existing = None
+    for tag in tags:
+        if module.params["name"] == tag["name"]:
+            existing = tag
+            break
+
+    if existing is not None:
+        module.exit_json(changed=False, tag=existing)
+    else:
+        create(do, module)
+
+
 def info(do, module):
 
     result = None
 
-    if module.params["tag_name"] is None:
-        module.fail_json(msg="the tag_name parameter is required")
+    if module.params["name"] is None:
+        module.fail_json(msg="the name parameter is required")
 
-    result = do.tag.info(module.params["tag_name"])
+    result = do.tag.info(module.params["name"])
 
     if "tag" not in result:
         module.fail_json(msg="DO API error", result=result)
@@ -124,13 +159,13 @@ def update(do, module):
 
     result = None
 
-    if module.params["tag_name"] is None:
-        module.fail_json(msg="the tag_name parameter is required")
-
     if module.params["name"] is None:
         module.fail_json(msg="the name parameter is required")
 
-    result = do.tag.update(module.params["tag_name"], module.params["name"])
+    if module.params["new_name"] is None:
+        module.fail_json(msg="the new_name parameter is required")
+
+    result = do.tag.update(module.params["name"], module.params["new_name"])
 
     if "tag" not in result:
         module.fail_json(msg="DO API error", result=result)
@@ -138,17 +173,44 @@ def update(do, module):
     module.exit_json(changed=True, tag=result['tag'])
 
 
+def build(do, module):
+
+    resources = []
+
+    if module.params["resource_type"] is not None and module.params["resource_id"] is not None:
+        resources.append({
+            "resource_type": module.params["resource_type"],
+            "resource_id": module.params["resource_id"]
+        })
+
+    if module.params["resource_type"] is not None and module.params["resource_ids"] is not None:
+        for resource_id in module.params["resource_ids"]:
+            resources.append({
+                "resource_type": module.params["resource_type"],
+                "resource_id": resource_id
+            })
+
+    if module.params["resources"] is not None:
+        resources.extend(copy.deepcopy(module.params["resources"]))
+
+    return resources
+
+
 def attach(do, module):
 
     result = None
 
-    if module.params["tag_name"] is None:
-        module.fail_json(msg="the tag_name parameter is required")
+    if module.params["name"] is None:
+        module.fail_json(msg="the name parameter is required")
 
-    if module.params["resources"] is None:
-        module.fail_json(msg="the resources parameter is required")
+    resources = build(do, module)
 
-    result = do.tag.attach(module.params["tag_name"], module.params["resources"])
+    if not resources:
+        module.fail_json(
+            msg="the resources or resource_type and resource_id(s) parameters are required"
+        )
+
+    result = do.tag.attach(module.params["name"], resources)
 
     if "status" not in result:
         module.fail_json(msg="DO API error", result=result)
@@ -160,13 +222,17 @@ def detach(do, module):
 
     result = None
 
-    if module.params["tag_name"] is None:
-        module.fail_json(msg="the tag_name parameter is required")
+    if module.params["name"] is None:
+        module.fail_json(msg="the name parameter is required")
 
-    if module.params["resources"] is None:
-        module.fail_json(msg="the resources parameter is required")
+    resources = build(do, module)
 
-    result = do.tag.detach(module.params["tag_name"], module.params["resources"])
+    if not resources:
+        module.fail_json(
+            msg="the resources or resource_type and resource_id(s) parameters are required"
+        )
+
+    result = do.tag.detach(module.params["name"], resources)
 
     if "status" not in result:
         module.fail_json(msg="DO API error", result=result)
@@ -178,10 +244,10 @@ def destroy(do, module):
 
     result = None
 
-    if module.params["tag_name"] is None:
-        module.fail_json(msg="the tag_name parameter is required")
+    if module.params["name"] is None:
+        module.fail_json(msg="the name parameter is required")
 
-    result = do.tag.destroy(module.params["tag_name"])
+    result = do.tag.destroy(module.params["name"])
 
     if "status" not in result:
         module.fail_json(msg="DO API error", result=result)
@@ -195,6 +261,7 @@ def main():
         argument_spec = dict(
             action=dict(default=None, required=True, choices=[
                 "create",
+                "present",
                 "info",
                 "list",
                 "update",
@@ -203,9 +270,12 @@ def main():
                 "destroy"
             ]),
             token=dict(default=None),
-            tag_name=dict(default=None),
             name=dict(default=None),
+            new_name=dict(default=None),
             resources=dict(default=None, type='list'),
+            resource_type=dict(default=None),
+            resource_id=dict(default=None),
+            resource_ids=dict(default=None, type='list'),
             url=dict(default="https://api.digitalocean.com/v2"),
         )
     )
@@ -225,6 +295,8 @@ def main():
 
     if module.params["action"] == "create":
         create(do, module)
+    elif module.params["action"] == "present":
+        present(do, module)
     elif module.params["action"] == "info":
         info(do, module)
     elif module.params["action"] == "list":
