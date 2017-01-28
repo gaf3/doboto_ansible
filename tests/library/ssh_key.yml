@@ -21,6 +21,43 @@
       - "{{ ssh_key_create.ssh_key.fingerprint == key_list.stdout.split()[1] }}"
     msg: "{{ ssh_key_create }}"
 
+- name: ssh_key | present | exists
+  doboto_ssh_key:
+    action: present
+    name: ssh-key-create
+    public_key: "{{ lookup('file', '/tmp/id_doboto.pub') }}"
+  register: ssh_key_present_exists
+
+- name: ssh_key | present | exists | verify
+  assert:
+    that:
+      - "{{ ssh_key_present_exists.ssh_key.name == 'ssh-key-create' }}"
+      - "{{ ssh_key_present_exists.ssh_key.public_key == lookup('file', '/tmp/id_doboto.pub') }}"
+      - "{{ ssh_key_present_exists.ssh_key.fingerprint == key_list.stdout.split()[1] }}"
+    msg: "{{ ssh_key_present_exists }}"
+
+- name: ssh_key | present | not exists | generate key
+  command: ssh-keygen -t rsa -P "" -C "doboto@digitalocean.com" -f /tmp/id_doboto_present
+
+- name: ssh_key | present | not exists | generate fingerprint
+  command: ssh-keygen -lf /tmp/id_doboto_present.pub
+  register: key_list_present
+
+- name: ssh_key | present | not exists
+  doboto_ssh_key:
+    action: present
+    name: ssh-key-present
+    public_key: "{{ lookup('file', '/tmp/id_doboto_present.pub') }}"
+  register: ssh_key_present_not_exists
+
+- name: ssh_key | present | not exists | verify
+  assert:
+    that:
+      - "{{ ssh_key_present_not_exists.ssh_key.name == 'ssh-key-present' }}"
+      - "{{ ssh_key_present_not_exists.ssh_key.public_key == lookup('file', '/tmp/id_doboto_present.pub') }}"
+      - "{{ ssh_key_present_not_exists.ssh_key.fingerprint == key_list_present.stdout.split()[1] }}"
+    msg: "{{ ssh_key_present_not_exists }}"
+
 - name: ssh_key | list
   doboto_ssh_key:
     action: list

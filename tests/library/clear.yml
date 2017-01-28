@@ -38,6 +38,8 @@
   with_items:
     - /tmp/id_doboto
     - /tmp/id_doboto.pub
+    - /tmp/id_doboto_present
+    - /tmp/id_doboto_present.pub
 
 - name: clear | tags | list
   doboto_tag:

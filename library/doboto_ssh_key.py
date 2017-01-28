@@ -38,6 +38,7 @@ options:
         ssh key action
         choices:
             - create
+            - present
             - list
             - info
             - update
@@ -87,6 +88,30 @@ def create(do, module):
         module.fail_json(msg="DO API error", result=result)
 
     module.exit_json(changed=True, ssh_key=result['ssh_key'])
+
+
+def present(do, module):
+
+    if module.params["name"] is None:
+        module.fail_json(msg="the name parameter is required")
+
+    result = do.ssh_key.list()
+
+    if "ssh_keys" not in result:
+        module.fail_json(msg="DO API error", result=result)
+
+    ssh_keys = result["ssh_keys"]
+
+    existing = None
+    for ssh_key in ssh_keys:
+        if module.params["name"] == ssh_key["name"]:
+            existing = ssh_key
+            break
+
+    if existing is not None:
+        module.exit_json(changed=False, ssh_key=existing)
+    else:
+        create(do, module)
 
 
 def list(do, module):
@@ -158,7 +183,7 @@ def main():
     module = AnsibleModule(
         argument_spec = dict(
             action=dict(default=None, required=True, choices=[
-                "create", "list", "info", "update", "destroy"
+                "create", "present", "list", "info", "update", "destroy"
             ]),
             token=dict(default=None),
             id=dict(default=None),
@@ -184,6 +209,8 @@ def main():
 
     if module.params["action"] == "create":
         create(do, module)
+    if module.params["action"] == "present":
+        present(do, module)
     elif module.params["action"] == "list":
         list(do, module)
     elif module.params["action"] == "info":
