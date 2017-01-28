@@ -1,31 +1,50 @@
-- name: list droplets
+- name: clear| account | info
+  doboto_account:
+  register: account_info
+
+- name: cleare| account | verify
+  assert:
+    that:
+      - "{{ account_info.account.uuid == 'b60c5d2212bf79e1a2bb0e3c1b2ae30a617fb796' }}"
+    msg: "{{ account_info }}"
+
+- name: clear | droplets | list
   doboto_droplet:
     action: list
   register: clear_droplets
 
-- name: clear droplets
+- name: clear | droplets | destroy
   doboto_droplet:
     action: destroy
-    droplet_id: "{{ item.id }}"
+    id: "{{ item.id }}"
   with_items: "{{ clear_droplets.droplets }}"
+  ignore_errors: yes
 
-- name: list ssh keys
+- name: clear | ssh keys | list
   doboto_ssh_key:
     action: list
   register: clear_ssh_keys
 
-- name: clear ssh keys
+- name: clear | ssh keys | destory
   doboto_ssh_key:
     action: destroy
     id: "{{ item.id }}"
   with_items: "{{ clear_ssh_keys.ssh_keys }}"
 
-- name: list tags
+- name: clear | ssh keys | files
+  file:
+    path: "{{ item }}"
+    state: absent
+  with_items:
+    - /tmp/id_doboto
+    - /tmp/id_doboto.pub
+
+- name: clear | tags | list
   doboto_tag:
     action: list
   register: clear_tags
 
-- name: clear tags
+- name: clear | tags | destroy
   doboto_tag:
     action: destroy
     tag_name: "{{ item.name }}"

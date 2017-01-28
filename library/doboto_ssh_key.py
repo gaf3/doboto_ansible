@@ -96,7 +96,7 @@ def list(do, module):
     if "ssh_keys" not in result:
         module.fail_json(msg="DO API error", result=result)
 
-    module.exit_json(changed=True, ssh_keys=result["ssh_keys"])
+    module.exit_json(changed=False, ssh_keys=result["ssh_keys"])
 
 
 def info(do, module):
@@ -113,7 +113,7 @@ def info(do, module):
     if "ssh_key" not in result:
         module.fail_json(msg="DO API error", result=result)
 
-    module.exit_json(changed=True, ssh_key=result["ssh_key"])
+    module.exit_json(changed=False, ssh_key=result["ssh_key"])
 
 
 def update(do, module):

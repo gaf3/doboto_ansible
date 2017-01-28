@@ -5,17 +5,21 @@
   gather_facts: false
   tasks:
 
-  - include: library/clear.yml
-    tags:
-      - ssh_key
-      - droplet
-      - tag
+  - block:
+    - include: library/account.yml
+    tags: account
 
-  - include: library/ssh_key.yml
+  - block:
+    - include: library/clear.yml
+    - include: library/ssh_key.yml
     tags: ssh_key
 
-  - include: library/droplet.yml
+  - block:
+    - include: library/clear.yml
+    - include: library/droplet.yml
     tags: droplet
 
-  - include: library/tag.yml
+  - block:
+    - include: library/clear.yml
+    - include: library/tag.yml
     tags: tag

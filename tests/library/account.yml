@@ -1,0 +1,20 @@
+- name: account | info | token
+  doboto_account:
+    token: "{{ lookup('env','DO_API_TOKEN') }}"
+  register: account_info_token
+
+- name: account | info | token | verify
+  assert:
+    that:
+      - "{{ account_info_token.account.uuid == 'b60c5d2212bf79e1a2bb0e3c1b2ae30a617fb796' }}"
+    msg: "{{ account_info_token }}"
+
+- name: account | info
+  doboto_account:
+  register: account_info
+
+- name: account | info | verify
+  assert:
+    that:
+      - "{{ account_info.account.uuid == 'b60c5d2212bf79e1a2bb0e3c1b2ae30a617fb796' }}"
+    msg: "{{ account_info }}"

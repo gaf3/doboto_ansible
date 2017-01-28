@@ -42,6 +42,9 @@ options:
             - list
             - info
             - destroy
+    id:
+        description:
+            - same as DO API variable (droplet id)
     name:
         description:
             - same as DO API variable (for single create)
@@ -81,15 +84,18 @@ options:
     tags:
         description:
             - same as DO API variable (if single value, converted to array)
-    tag:
+    tag_name:
         description:
-            - same as DO API variable (for destryoing a droplet)
+            - same as DO API variable (for tag ID)
     wait:
         description:
             - wait until tasks has completed before continuing
     poll:
         description:
             - poll value to check while waiting (default 5 seconds)
+    timeout:
+        description:
+            - timeout value to give up after waiting (default 120 seconds)
     url:
         description:
             - URL to use if not official (for experimenting)
@@ -104,6 +110,7 @@ EXAMPLES = '''
 
 import os
 import time
+import copy
 from ansible.module_utils.basic import *
 
 try:
@@ -112,6 +119,32 @@ except ImportError:
     doboto_found = False
 else:
     doboto_found = True
+
+
+def ready(droplet, module, existing):
+
+    for exist in existing:
+        if droplet["id"] == exist["id"]:
+            return True
+
+    if droplet["status"] == "new":
+        return False
+
+    if module.params["private_networking"]:
+        found = False
+        for v4 in droplet["networks"]["v4"]:
+            if v4["type"] == "private":
+                found = True
+        if not found:
+            return False
+
+    if module.params["ipv6"] and not droplet["networks"]["v6"]:
+        return False
+
+    if module.params["tags"] and len(module.params["tags"]) != len(droplet["tags"]):
+        return False
+
+    return True
 
 
 def create(do, module, existing=None):
@@ -139,7 +172,7 @@ def create(do, module, existing=None):
         attribs[required] = module.params[required]
 
     for optional in [
-        'ssh_keys', 'volume', 'tags','backups', 'ipv6',
+        'ssh_keys', 'volume', 'tags', 'backups', 'ipv6',
         'private_networking', 'user_data', 'monitoring'
     ]:
         attribs[optional] = module.params[optional]
@@ -156,30 +189,40 @@ def create(do, module, existing=None):
 
         droplet = result["droplet"]
 
-        while module.params["wait"] and result["droplet"]["status"] == "new":
+        start_time = time.time()
+
+        while module.params["wait"] and not ready(result["droplet"], module, existing):
 
             time.sleep(module.params["poll"])
             latest = do.droplet.info(droplet["id"])
             if "droplet" in latest:
                 result = latest
 
+            if time.time() - start_time > module.params["timeout"]:
+                module.fail_json(msg="Timeout on polling", droplet=result['droplet'])
+
         module.exit_json(changed=True, droplet=result['droplet'])
 
     elif "droplets" in result:
 
-        droplets = existing
+        droplets = copy.deepcopy(existing)
         droplets.extend(result["droplets"])
 
+        start_time = time.time()
+
         while module.params["wait"] and \
-            len([1 for droplet in droplets if droplet["status"] == "new"]) > 0:
+          len([1 for droplet in droplets if not ready(droplet, module, existing)]) > 0:
 
             time.sleep(module.params["poll"])
 
             for index, droplet in enumerate(droplets):
-                if droplet["status"] == "new":
+                if not ready(droplet, module, existing):
                     latest = do.droplet.info(droplet["id"])
                     if "droplet" in latest:
                         droplets[index] = latest["droplet"]
+
+            if time.time() - start_time > module.params["timeout"]:
+                module.fail_json(msg="Timeout on polling", droplets=droplets)
 
         if not existing:
             module.exit_json(changed=True, droplets=droplets)
@@ -235,39 +278,44 @@ def present(do, module):
 
 def list(do, module):
 
-    result = do.droplet.list()
+    result = None
+
+    if module.params["tag_name"] is None:
+        result = do.droplet.list()
+    else:
+        result = do.droplet.list(tag_name=module.params["tag_name"])
 
     if "droplets" not in result:
         module.fail_json(msg="DO API error", result=result)
 
-    module.exit_json(changed=True, droplets=result["droplets"])
+    module.exit_json(changed=False, droplets=result["droplets"])
 
 
 def info(do, module):
 
     result = None
 
-    if module.params["droplet_id"] is None:
-        module.fail_json(msg="the droplet_id is required")
+    if module.params["id"] is None:
+        module.fail_json(msg="the id parameter is required")
 
-    result = do.droplet.info(module.params["droplet_id"])
+    result = do.droplet.info(module.params["id"])
 
     if "droplet" not in result:
         module.fail_json(msg="DO API error", result=result)
 
-    module.exit_json(changed=True, droplet=result["droplet"])
+    module.exit_json(changed=False, droplet=result["droplet"])
 
 
 def destroy(do, module):
 
     result = None
 
-    if module.params["droplet_id"] is not None:
-        result = do.droplet.destroy(droplet_id=module.params["droplet_id"])
-    elif module.params["tag"] is not None:
-        result = do.droplet.destroy(with_tag=module.params["tag"])
+    if module.params["id"] is not None:
+        result = do.droplet.destroy(id=module.params["id"])
+    elif module.params["tag_name"] is not None:
+        result = do.droplet.destroy(tag_name=module.params["tag_name"])
     else:
-        module.fail_json(msg="the droplet_id or tag parameter is required")
+        module.fail_json(msg="the id or tag_name parameter is required")
 
     if "status" not in result:
         module.fail_json(msg="DO API error", result=result)
@@ -282,6 +330,7 @@ def main():
                 "create", "present", "list", "info", "destroy"
             ]),
             token=dict(default=None),
+            id=dict(default=None),
             name=dict(default=None),
             names=dict(default=None, type='list'),
             region=dict(default=None),
@@ -291,14 +340,14 @@ def main():
             backups=dict(default=False, type='bool'),
             ipv6=dict(default=False, type='bool'),
             private_networking=dict(type='bool'),
-            user_data=dict(default=False, type='bool'),
+            user_data=dict(default=False),
             monitoring=dict(type='bool'),
             volume=dict(default=None, type='list'),
             tags=dict(type='list'),
-            tag=dict(default=None),
-            droplet_id=dict(default=None),
+            tag_name=dict(default=None),
             wait=dict(default=False, type='bool'),
             poll=dict(default=5, type='int'),
+            timeout=dict(default=120, type='int'),
             url=dict(default="https://api.digitalocean.com/v2"),
             extra=dict(default=None, type='dict'),
         )

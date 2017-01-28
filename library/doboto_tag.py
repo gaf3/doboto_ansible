@@ -97,7 +97,7 @@ def info(do, module):
     if "tag" not in result:
         module.fail_json(msg="DO API error", result=result)
 
-    module.exit_json(changed=True, tag=result['tag'])
+    module.exit_json(changed=False, tag=result['tag'])
 
 
 def list(do, module):
@@ -107,7 +107,7 @@ def list(do, module):
     if "tags" not in result:
         module.fail_json(msg="DO API error", result=result)
 
-    module.exit_json(changed=True, tags=result["tags"])
+    module.exit_json(changed=False, tags=result["tags"])
 
 
 def names(do, module):
@@ -117,7 +117,7 @@ def names(do, module):
     if "tags" not in result:
         module.fail_json(msg="DO API error", result=result)
 
-    module.exit_json(changed=True, tags=result["tags"])
+    module.exit_json(changed=False, tags=result["tags"])
 
 
 def update(do, module):
