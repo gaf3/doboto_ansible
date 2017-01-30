@@ -5,9 +5,13 @@
   gather_facts: false
   tasks:
 
-  - block:
-    - include: library/account.yml
+  - include: library/account.yml
     tags: account
+
+  - block:
+    - include: library/clear.yml
+    - include: library/action.yml
+    tags: action
 
   - block:
     - include: library/clear.yml

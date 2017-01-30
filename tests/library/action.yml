@@ -1,0 +1,39 @@
+- name: action | droplet | create
+  doboto_droplet:
+    action: create
+    name: action-droplet
+    region: nyc3
+    size: 1gb
+    image: debian-7-0-x64
+  register: action_droplet
+
+- name: action | droplet | create | action
+  doboto_droplet:
+    action: actions
+    id: "{{action_droplet.droplet.id}}"
+  register: action_droplet_actions
+
+- name: action | list
+  doboto_action:
+    token: "{{ lookup('env','DO_API_TOKEN') }}"
+    action: list
+  register: action_list
+
+- name: action | list | verify
+  assert:
+    that:
+      - "{{ action_list|length > 0 }}"
+    msg: "{{ action_list }}"
+
+- name: action | info
+  doboto_action:
+    action: info
+    id: "{{ action_droplet_actions.actions[0].id }}"
+  register: action_info
+
+- name: action | info | verify
+  assert:
+    that:
+      - "{{ action_info.action.resource_type == 'droplet' }}"
+      - "{{ action_info.action.resource_id == action_droplet_actions.actions[0].resource_id }}"
+    msg: "{{ action_info }}"
