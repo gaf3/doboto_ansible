@@ -1,0 +1,469 @@
+- name: droplet_action | single | create
+  doboto_droplet:
+    action: create
+    name: droplet-action
+    region: nyc3
+    size: 1gb
+    image: debian-8-x64
+    wait: true
+  register: droplet_action
+
+- name: droplet_action | single | enable_backups
+  doboto_droplet:
+    action: enable_backups
+    id: "{{ droplet_action.droplet.id }}"
+    wait: true
+  register: single_enable_backups
+
+- name: droplet_action | single | enable_backups | verify
+  assert:
+    that:
+      - "{{ single_enable_backups.action.type == 'enable_backups' }}"
+      - "{{ single_enable_backups.action.resource_type == 'droplet' }}"
+      - "{{ single_enable_backups.action.resource_id == droplet_action.droplet.id }}"
+      - "{{ single_enable_backups.action.status != 'in-progress' }}"
+    msg: "{{ single_enable_backups }}"
+
+- name: droplet_action | single | disable_backups
+  doboto_droplet:
+    action: disable_backups
+    id: "{{ droplet_action.droplet.id }}"
+    wait: true
+  register: single_disable_backups
+
+- name: droplet_action | single | disable_backups | verify
+  assert:
+    that:
+      - "{{ single_disable_backups.action.type == 'disable_backups' }}"
+      - "{{ single_disable_backups.action.resource_type == 'droplet' }}"
+      - "{{ single_disable_backups.action.resource_id == droplet_action.droplet.id }}"
+      - "{{ single_disable_backups.action.status != 'in-progress' }}"
+    msg: "{{ single_disable_backups }}"
+
+- name: droplet_action | single | reboot
+  doboto_droplet:
+    action: reboot
+    id: "{{ droplet_action.droplet.id }}"
+    wait: true
+  register: single_reboot
+
+- name: droplet_action | single | reboot | verify
+  assert:
+    that:
+      - "{{ single_reboot.action.type == 'reboot' }}"
+      - "{{ single_reboot.action.resource_type == 'droplet' }}"
+      - "{{ single_reboot.action.resource_id == droplet_action.droplet.id }}"
+      - "{{ single_reboot.action.status != 'in-progress' }}"
+    msg: "{{ single_reboot }}"
+
+- name: droplet_action | single | shutdown
+  doboto_droplet:
+    action: shutdown
+    id: "{{ droplet_action.droplet.id }}"
+    wait: true
+  register: single_shutdown
+
+- name: droplet_action | single | shutdown | verify
+  assert:
+    that:
+      - "{{ single_shutdown.action.type == 'shutdown' }}"
+      - "{{ single_shutdown.action.resource_type == 'droplet' }}"
+      - "{{ single_shutdown.action.resource_id == droplet_action.droplet.id }}"
+      - "{{ single_shutdown.action.status != 'in-progress' }}"
+    msg: "{{ single_shutdown }}"
+
+- name: droplet_action | single | power_off
+  doboto_droplet:
+    action: power_off
+    id: "{{ droplet_action.droplet.id }}"
+    wait: true
+  register: single_power_off
+
+- name: droplet_action | single | power_off | verify
+  assert:
+    that:
+      - "{{ single_power_off.action.type == 'power_off' }}"
+      - "{{ single_power_off.action.resource_type == 'droplet' }}"
+      - "{{ single_power_off.action.resource_id == droplet_action.droplet.id }}"
+      - "{{ single_power_off.action.status != 'in-progress' }}"
+    msg: "{{ single_power_off }}"
+
+- name: droplet_action | single | enable_private_networking
+  doboto_droplet:
+    action: enable_private_networking
+    id: "{{ droplet_action.droplet.id }}"
+    wait: true
+  register: single_enable_private_networking
+
+- name: droplet_action | single | enable_private_networking | verify
+  assert:
+    that:
+      - "{{ single_enable_private_networking.action.type == 'enable_private_networking' }}"
+      - "{{ single_enable_private_networking.action.resource_type == 'droplet' }}"
+      - "{{ single_enable_private_networking.action.resource_id == droplet_action.droplet.id }}"
+      - "{{ single_enable_private_networking.action.status != 'in-progress' }}"
+    msg: "{{ single_enable_private_networking }}"
+
+- name: droplet_action | single | enable_ipv6
+  doboto_droplet:
+    action: enable_ipv6
+    id: "{{ droplet_action.droplet.id }}"
+    wait: true
+  register: single_enable_ipv6
+
+- name: droplet_action | single | enable_ipv6 | verify
+  assert:
+    that:
+      - "{{ single_enable_ipv6.action.type == 'enable_ipv6' }}"
+      - "{{ single_enable_ipv6.action.resource_type == 'droplet' }}"
+      - "{{ single_enable_ipv6.action.resource_id == droplet_action.droplet.id }}"
+      - "{{ single_enable_ipv6.action.status != 'in-progress' }}"
+    msg: "{{ single_enable_ipv6 }}"
+
+- name: droplet_action | single | power_on
+  doboto_droplet:
+    action: power_on
+    id: "{{ droplet_action.droplet.id }}"
+    wait: true
+  register: single_power_on
+
+- name: droplet_action | single | power_on | verify
+  assert:
+    that:
+      - "{{ single_power_on.action.type == 'power_on' }}"
+      - "{{ single_power_on.action.resource_type == 'droplet' }}"
+      - "{{ single_power_on.action.resource_id == droplet_action.droplet.id }}"
+      - "{{ single_power_on.action.status != 'in-progress' }}"
+    msg: "{{ single_power_on }}"
+
+- name: droplet_action | single | power_cycle
+  doboto_droplet:
+    action: power_cycle
+    id: "{{ droplet_action.droplet.id }}"
+    wait: true
+  register: single_power_cycle
+
+- name: droplet_action | single | power_cycle | verify
+  assert:
+    that:
+      - "{{ single_power_cycle.action.type == 'power_cycle' }}"
+      - "{{ single_power_cycle.action.resource_type == 'droplet' }}"
+      - "{{ single_power_cycle.action.resource_id == droplet_action.droplet.id }}"
+      - "{{ single_power_cycle.action.status != 'in-progress' }}"
+    msg: "{{ single_power_cycle }}"
+
+- name: droplet_action | single | password_reset
+  doboto_droplet:
+    action: password_reset
+    id: "{{ droplet_action.droplet.id }}"
+    image: ubuntu-14-04-x64
+    wait: true
+  register: single_password_reset
+
+- name: droplet_action | single | password_reset | verify
+  assert:
+    that:
+      - "{{ single_password_reset.action.type == 'password_reset' }}"
+      - "{{ single_password_reset.action.resource_type == 'droplet' }}"
+      - "{{ single_password_reset.action.resource_id == droplet_action.droplet.id }}"
+      - "{{ single_password_reset.action.status != 'in-progress' }}"
+    msg: "{{ single_password_reset }}"
+
+- name: droplet_action | single | resize
+  doboto_droplet:
+    action: resize
+    id: "{{ droplet_action.droplet.id }}"
+    size: 2gb
+    disk: true
+    wait: true
+  register: single_resize
+
+- name: droplet_action | single | resize | verify
+  assert:
+    that:
+      - "{{ single_resize.action.type == 'resize' }}"
+      - "{{ single_resize.action.resource_type == 'droplet' }}"
+      - "{{ single_resize.action.resource_id == droplet_action.droplet.id }}"
+      - "{{ single_resize.action.status != 'in-progress' }}"
+    msg: "{{ single_resize }}"
+
+- name: droplet_action | single | rebuild
+  doboto_droplet:
+    action: rebuild
+    id: "{{ droplet_action.droplet.id }}"
+    image: debian-8-x64
+    wait: true
+  register: single_rebuild
+
+- name: droplet_action | single | rebuild | verify
+  assert:
+    that:
+      - "{{ single_rebuild.action.type == 'rebuild' }}"
+      - "{{ single_rebuild.action.resource_type == 'droplet' }}"
+      - "{{ single_rebuild.action.resource_id == droplet_action.droplet.id }}"
+      - "{{ single_rebuild.action.status != 'in-progress' }}"
+    msg: "{{ single_rebuild }}"
+
+- name: droplet_action | single | rename
+  doboto_droplet:
+    action: rename
+    id: "{{ droplet_action.droplet.id }}"
+    name: droplet-reaction
+    wait: true
+  register: single_rename
+
+- name: droplet_action | single | rename | verify
+  assert:
+    that:
+      - "{{ single_rename.action.type == 'rename' }}"
+      - "{{ single_rename.action.resource_type == 'droplet' }}"
+      - "{{ single_rename.action.resource_id == droplet_action.droplet.id }}"
+      - "{{ single_rename.action.status != 'in-progress' }}"
+    msg: "{{ single_rename }}"
+
+- name: droplet_action | single | change_kernel
+  doboto_droplet:
+    action: change_kernel
+    id: "{{ droplet_action.droplet.id }}"
+    kernel: 944
+    wait: true
+  register: single_change_kernel
+
+- name: droplet_action | single | change_kernel | verify
+  assert:
+    that:
+      - "{{ single_change_kernel.action.type == 'change_kernel' }}"
+      - "{{ single_change_kernel.action.resource_type == 'droplet' }}"
+      - "{{ single_change_kernel.action.resource_id == droplet_action.droplet.id }}"
+      - "{{ single_change_kernel.action.status != 'in-progress' }}"
+    msg: "{{ single_change_kernel }}"
+
+- name: droplet_action | single | snapshot
+  doboto_droplet:
+    action: snapshot
+    id: "{{ droplet_action.droplet.id }}"
+    name: "how-bow-dah"
+    wait: true
+  register: single_snapshot
+
+- name: droplet_action | single | snapshot | verify
+  assert:
+    that:
+      - "{{ single_snapshot.action.type == 'snapshot' }}"
+      - "{{ single_snapshot.action.resource_type == 'droplet' }}"
+      - "{{ single_snapshot.action.resource_id == droplet_action.droplet.id }}"
+      - "{{ single_snapshot.action.status != 'in-progress' }}"
+    msg: "{{ single_snapshot }}"
+
+- name: droplet_action | single | snapshots
+  doboto_droplet:
+    action: snapshots
+    id: "{{ droplet_action.droplet.id }}"
+  register: single_snapshots
+
+- name: droplet_action | single | restore
+  doboto_droplet:
+    action: restore
+    id: "{{ droplet_action.droplet.id }}"
+    image: "{{ single_snapshots.snapshots[0].id }}"
+    wait: true
+  register: single_restore
+
+- name: droplet_action | single | restore | verify
+  assert:
+    that:
+      - "{{ single_restore.action.type == 'restore' }}"
+      - "{{ single_restore.action.resource_type == 'droplet' }}"
+      - "{{ single_restore.action.resource_id == droplet_action.droplet.id }}"
+      - "{{ single_restore.action.status != 'in-progress' }}"
+    msg: "{{ single_restore }}"
+
+- name: droplet_action | single | action_info
+  doboto_droplet:
+    action: action_info
+    id: "{{ droplet_action.droplet.id }}"
+    action_id: "{{ single_restore.action.id }}"
+  register: single_action_info
+
+- name: droplet_action | single | action_info | verify
+  assert:
+    that:
+      - "{{ single_action_info.action.type == 'restore' }}"
+      - "{{ single_action_info.action.resource_type == 'droplet' }}"
+      - "{{ single_action_info.action.resource_id == droplet_action.droplet.id }}"
+      - "{{ single_action_info.action.status != 'in-progress' }}"
+    msg: "{{ single_action_info }}"
+
+- name: droplet_action | multiple | create
+  doboto_droplet:
+    action: create
+    names:
+      - droplet-action-01
+      - droplet-action-02
+    region: nyc3
+    size: 1gb
+    image: ubuntu-14-04-x64
+    tags: some
+    wait: true
+  register: droplets_action
+
+- name: droplet_action | multiple | enable_backups
+  doboto_droplet:
+    action: enable_backups
+    tag_name: some
+    wait: true
+  register: multiple_enable_backups
+
+- name: droplet_action | multiple | enable_backups | verify
+  assert:
+    that:
+      - "{{ multiple_enable_backups.actions[0].type == 'enable_backups' }}"
+      - "{{ multiple_enable_backups.actions[0].resource_type == 'droplet' }}"
+      - "{{ multiple_enable_backups.actions[0].status != 'in-progress' }}"
+      - "{{ multiple_enable_backups.actions[1].type == 'enable_backups' }}"
+      - "{{ multiple_enable_backups.actions[1].resource_type == 'droplet' }}"
+      - "{{ multiple_enable_backups.actions[1].status != 'in-progress' }}"
+    msg: "{{ multiple_enable_backups }}"
+
+- name: droplet_action | multiple | disable_backups
+  doboto_droplet:
+    action: disable_backups
+    tag_name: some
+    wait: true
+  register: multiple_disable_backups
+
+- name: droplet_action | multiple | disable_backups | verify
+  assert:
+    that:
+      - "{{ multiple_disable_backups.actions[0].type == 'disable_backups' }}"
+      - "{{ multiple_disable_backups.actions[0].resource_type == 'droplet' }}"
+      - "{{ multiple_disable_backups.actions[0].status != 'in-progress' }}"
+      - "{{ multiple_disable_backups.actions[1].type == 'disable_backups' }}"
+      - "{{ multiple_disable_backups.actions[1].resource_type == 'droplet' }}"
+      - "{{ multiple_disable_backups.actions[1].status != 'in-progress' }}"
+    msg: "{{ multiple_disable_backups }}"
+
+- name: droplet_action | multiple | shutdown
+  doboto_droplet:
+    action: shutdown
+    tag_name: some
+    wait: true
+  register: multiple_shutdown
+
+- name: droplet_action | multiple | shutdown | verify
+  assert:
+    that:
+      - "{{ multiple_shutdown.actions[0].type == 'shutdown' }}"
+      - "{{ multiple_shutdown.actions[0].resource_type == 'droplet' }}"
+      - "{{ multiple_shutdown.actions[0].status != 'in-progress' }}"
+      - "{{ multiple_shutdown.actions[1].type == 'shutdown' }}"
+      - "{{ multiple_shutdown.actions[1].resource_type == 'droplet' }}"
+      - "{{ multiple_shutdown.actions[1].status != 'in-progress' }}"
+    msg: "{{ multiple_shutdown }}"
+
+- name: droplet_action | multiple | power_off
+  doboto_droplet:
+    action: power_off
+    tag_name: some
+    wait: true
+  register: multiple_power_off
+
+- name: droplet_action | multiple | power_off | verify
+  assert:
+    that:
+      - "{{ multiple_power_off.actions[0].type == 'power_off' }}"
+      - "{{ multiple_power_off.actions[0].resource_type == 'droplet' }}"
+      - "{{ multiple_power_off.actions[0].status != 'in-progress' }}"
+      - "{{ multiple_power_off.actions[1].type == 'power_off' }}"
+      - "{{ multiple_power_off.actions[1].resource_type == 'droplet' }}"
+      - "{{ multiple_power_off.actions[1].status != 'in-progress' }}"
+    msg: "{{ multiple_power_off }}"
+
+- name: droplet_action | multiple | enable_private_networking
+  doboto_droplet:
+    action: enable_private_networking
+    tag_name: some
+    wait: true
+  register: multiple_enable_private_networking
+
+- name: droplet_action | multiple | enable_private_networking | verify
+  assert:
+    that:
+      - "{{ multiple_enable_private_networking.actions[0].type == 'enable_private_networking' }}"
+      - "{{ multiple_enable_private_networking.actions[0].resource_type == 'droplet' }}"
+      - "{{ multiple_enable_private_networking.actions[0].status != 'in-progress' }}"
+      - "{{ multiple_enable_private_networking.actions[1].type == 'enable_private_networking' }}"
+      - "{{ multiple_enable_private_networking.actions[1].resource_type == 'droplet' }}"
+      - "{{ multiple_enable_private_networking.actions[1].status != 'in-progress' }}"
+    msg: "{{ multiple_enable_private_networking }}"
+
+- name: droplet_action | multiple | enable_ipv6
+  doboto_droplet:
+    action: enable_ipv6
+    tag_name: some
+    wait: true
+  register: multiple_enable_ipv6
+
+- name: droplet_action | multiple | enable_ipv6 | verify
+  assert:
+    that:
+      - "{{ multiple_enable_ipv6.actions[0].type == 'enable_ipv6' }}"
+      - "{{ multiple_enable_ipv6.actions[0].resource_type == 'droplet' }}"
+      - "{{ multiple_enable_ipv6.actions[0].status != 'in-progress' }}"
+      - "{{ multiple_enable_ipv6.actions[1].type == 'enable_ipv6' }}"
+      - "{{ multiple_enable_ipv6.actions[1].resource_type == 'droplet' }}"
+      - "{{ multiple_enable_ipv6.actions[1].status != 'in-progress' }}"
+    msg: "{{ multiple_enable_ipv6 }}"
+
+- name: droplet_action | multiple | power_on
+  doboto_droplet:
+    action: power_on
+    tag_name: some
+    wait: true
+  register: multiple_power_on
+
+- name: droplet_action | multiple | power_on | verify
+  assert:
+    that:
+      - "{{ multiple_power_on.actions[0].type == 'power_on' }}"
+      - "{{ multiple_power_on.actions[0].resource_type == 'droplet' }}"
+      - "{{ multiple_power_on.actions[0].status != 'in-progress' }}"
+      - "{{ multiple_power_on.actions[1].type == 'power_on' }}"
+      - "{{ multiple_power_on.actions[1].resource_type == 'droplet' }}"
+      - "{{ multiple_power_on.actions[1].status != 'in-progress' }}"
+    msg: "{{ multiple_power_on }}"
+
+- name: droplet_action | multiple | power_cycle
+  doboto_droplet:
+    action: power_cycle
+    tag_name: some
+    wait: true
+  register: multiple_power_cycle
+
+- name: droplet_action | multiple | power_cycle | verify
+  assert:
+    that:
+      - "{{ multiple_power_cycle.actions[0].type == 'power_cycle' }}"
+      - "{{ multiple_power_cycle.actions[0].resource_type == 'droplet' }}"
+      - "{{ multiple_power_cycle.actions[0].status != 'in-progress' }}"
+      - "{{ multiple_power_cycle.actions[1].type == 'power_cycle' }}"
+      - "{{ multiple_power_cycle.actions[1].resource_type == 'droplet' }}"
+      - "{{ multiple_power_cycle.actions[1].status != 'in-progress' }}"
+    msg: "{{ multiple_power_cycle }}"
+
+
+- name: droplet_action | multiple | snapshot
+  doboto_droplet:
+    action: snapshot
+    tag_name: some
+    name: cash-me-ousside
+    wait: true
+  register: multiple_snapshot
+
+- name: droplet_action | multiple | snapshot | verify
+  assert:
+    that:
+      - "{{ multiple_snapshot.action.type == 'snapshot' }}"
+      - "{{ multiple_snapshot.action.resource_type == 'droplet' }}"
+      - "{{ multiple_snapshot.action.status != 'in-progress' }}"
+    msg: "{{ multiple_snapshot }}"

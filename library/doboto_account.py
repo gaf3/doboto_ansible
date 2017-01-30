@@ -1,6 +1,10 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+import os
+from ansible.module_utils.basic import AnsibleModule
+from doboto.DO import DO
+
 """
 
 Ansible module to manage DigitalOcean account
@@ -42,44 +46,41 @@ options:
 EXAMPLES = '''
 '''
 
-import os
-from ansible.module_utils.basic import *
 
-try:
-    from doboto.DO import DO
-except ImportError:
-    doboto_found = False
-else:
-    doboto_found = True
+class Account(object):
 
+    url = "https://api.digitalocean.com/v2"
 
-def main():
+    def __init__(self):
 
-    module = AnsibleModule(
-        argument_spec = dict(
+        self.module = self.input()
+
+        token = self.module.params["token"]
+
+        if token is None:
+            token = os.environ.get('DO_API_TOKEN', None)
+
+        if token is None:
+            self.module.fail_json(msg="the token parameter is required")
+
+        self.do = DO(url=self.module.params["url"], token=token)
+
+        self.act()
+
+    def input(self):
+
+        return AnsibleModule(argument_spec=dict(
             token=dict(default=None),
-            url=dict(default="https://api.digitalocean.com/v2"),
-        )
-    )
+            url=dict(default=self.url),
+        ))
 
-    if not doboto_found:
-        module.fail_json(msg="the python doboto module is required")
+    def act(self):
 
-    token = module.params["token"]
+        result = self.do.account.info()
 
-    if token is None:
-        token = os.environ.get('DO_API_TOKEN', None)
+        if "account" not in result:
+            self.module.fail_json(msg="DO API error", result=result)
 
-    if token is None:
-        module.fail_json(msg="the token parameter is required")
+        self.module.exit_json(changed=False, account=result['account'])
 
-    do = DO(url=module.params["url"], token=token)
-
-    result = do.account.info()
-
-    if "account" not in result:
-        module.fail_json(msg="DO API error", result=result)
-
-    module.exit_json(changed=False, account=result['account'])
-
-main()
+Account()

@@ -5,7 +5,7 @@
     name: droplet-create
     region: nyc3
     size: 1gb
-    image: ubuntu-14-04-x64
+    image: debian-7-0-x64
   register: droplet_create
 
 - name: droplet | create | simple | verify
@@ -14,7 +14,7 @@
       - "{{ droplet_create.droplet.name == 'droplet-create' }}"
       - "{{ droplet_create.droplet.region.slug == 'nyc3' }}"
       - "{{ droplet_create.droplet.size.slug == '1gb' }}"
-      - "{{ droplet_create.droplet.image.slug == 'ubuntu-14-04-x64' }}"
+      - "{{ droplet_create.droplet.image.slug == 'debian-7-0-x64' }}"
       - "{{ droplet_create.droplet.tags == [] }}"
       - "{{ droplet_create.droplet.volume_ids == [] }}"
     msg: "{{ droplet_create }}"
@@ -54,7 +54,7 @@
       - "{{ droplet_present_exists.droplet.name == 'droplet-create' }}"
       - "{{ droplet_present_exists.droplet.region.slug == 'nyc3' }}"
       - "{{ droplet_present_exists.droplet.size.slug == '1gb' }}"
-      - "{{ droplet_present_exists.droplet.image.slug == 'ubuntu-14-04-x64' }}"
+      - "{{ droplet_present_exists.droplet.image.slug == 'debian-7-0-x64' }}"
       - "{{ droplet_present_exists.droplet.tags == [] }}"
       - "{{ droplet_present_exists.droplet.volume_ids == [] }}"
     msg: "{{ droplet_present_exists }}"
@@ -179,6 +179,18 @@
       - "{{ droplets_present_mixed.droplets[2].name == 'droplet-create-06' }}"
     msg: "{{ droplets_present_mixed }}"
 
+- name: droplet | info
+  doboto_droplet:
+    action: info
+    id: "{{ droplet_create.droplet.id }}"
+  register: droplet_info
+
+- name: droplet | info | verify
+  assert:
+    that:
+      - "{{ droplet_info.droplet.name == 'droplet-create' }}"
+    msg: "{{ droplet_info }}"
+
 - name: droplet | list
   doboto_droplet:
     action: list
@@ -226,17 +238,53 @@
     droplet_create_05_query: "droplets[?name=='droplet-create-05'].id | [0]"
     droplet_create_06_query: "droplets[?name=='droplet-create-06'].id | [0]"
 
-- name: droplet | info
+- name: droplet | kernels
   doboto_droplet:
-    action: info
+    action: kernels
     id: "{{ droplet_create.droplet.id }}"
-  register: droplet_info
+  register: droplet_kernels
 
-- name: droplet | info | verify
+- name: droplet | kernels | verify
   assert:
     that:
-      - "{{ droplet_info.droplet.name == 'droplet-create' }}"
-    msg: "{{ droplet_info }}"
+      - "{{ droplet_kernels.kernels|length > 0 }}"
+    msg: "{{ droplet_kernels }}"
+
+- name: droplet | snapshots
+  doboto_droplet:
+    action: snapshots
+    id: "{{ droplet_create.droplet.id }}"
+  register: droplet_snapshots
+
+- name: droplet | snapshots | verify
+  assert:
+    that:
+      - "{{ droplet_snapshots.snapshots|length > -1 }}"
+    msg: "{{ droplet_snapshots }}"
+
+- name: droplet | backups
+  doboto_droplet:
+    action: backups
+    id: "{{ droplet_create.droplet.id }}"
+  register: droplet_backups
+
+- name: droplet | backups | verify
+  assert:
+    that:
+      - "{{ droplet_backups.backups|length > -1 }}"
+    msg: "{{ droplet_backups }}"
+
+- name: droplet | actions
+  doboto_droplet:
+    action: actions
+    id: "{{ droplet_create.droplet.id }}"
+  register: droplet_actions
+
+- name: droplet | actions | verify
+  assert:
+    that:
+      - "{{ droplet_actions.actions|length > 0 }}"
+    msg: "{{ droplet_actions }}"
 
 - name: droplet | destroy | by id
   doboto_droplet:
@@ -261,3 +309,26 @@
     that:
       - "{{ droplet_tag_destroy.result.status == 204 }}"
     msg: "{{ droplet_tag_destroy }}"
+
+- name: droplet | neighbors
+  doboto_droplet:
+    action: neighbors
+    id: "{{ droplet_create.droplet.id }}"
+  register: droplet_neighbors
+
+- name: droplet | neighbors | verify
+  assert:
+    that:
+      - "{{ droplet_neighbors.droplets|length > -1 }}"
+    msg: "{{ droplet_neighbors }}"
+
+- name: droplet | droplet_neighbors
+  doboto_droplet:
+    action: droplet_neighbors
+  register: droplet_droplet_neighbors
+
+- name: droplet | droplet_neighbors | verify
+  assert:
+    that:
+      - "{{ droplet_droplet_neighbors.neighbors|length > -1 }}"
+    msg: "{{ droplet_droplet_neighbors }}"

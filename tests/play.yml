@@ -21,5 +21,10 @@
 
   - block:
     - include: library/clear.yml
+    - include: library/droplet_action.yml
+    tags: droplet_action
+
+  - block:
+    - include: library/clear.yml
     - include: library/tag.yml
     tags: tag

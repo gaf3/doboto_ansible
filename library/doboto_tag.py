@@ -1,6 +1,12 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+import os
+import copy
+from ansible.module_utils.basic import AnsibleModule
+from doboto.DO import DO
+
+
 """
 
 Ansible module to manage DigitalOcean tags
@@ -71,194 +77,30 @@ options:
 EXAMPLES = '''
 '''
 
-import os
-import copy
-from ansible.module_utils.basic import *
 
-try:
-    from doboto.DO import DO
-except ImportError:
-    doboto_found = False
-else:
-    doboto_found = True
+class Tag(object):
 
+    url = "https://api.digitalocean.com/v2"
 
-def create(do, module):
+    def __init__(self):
 
-    if module.params["name"] is None:
-        module.fail_json(msg="the name parameter is required")
+        self.module = self.input()
 
-    result = do.tag.create(module.params["name"])
+        token = self.module.params["token"]
 
-    if "tag" not in result:
-        module.fail_json(msg="DO API error", result=result)
+        if token is None:
+            token = os.environ.get('DO_API_TOKEN', None)
 
-    module.exit_json(changed=True, tag=result['tag'])
+        if token is None:
+            self.module.fail_json(msg="the token parameter is required")
 
+        self.do = DO(url=self.module.params["url"], token=token)
 
-def present(do, module):
+        self.act()
 
-    if module.params["name"] is None:
-        module.fail_json(msg="the name parameter is required")
+    def input(self):
 
-    result = do.tag.list()
-
-    if "tags" not in result:
-        module.fail_json(msg="DO API error", result=result)
-
-    tags = result["tags"]
-
-    existing = None
-    for tag in tags:
-        if module.params["name"] == tag["name"]:
-            existing = tag
-            break
-
-    if existing is not None:
-        module.exit_json(changed=False, tag=existing)
-    else:
-        create(do, module)
-
-
-def info(do, module):
-
-    result = None
-
-    if module.params["name"] is None:
-        module.fail_json(msg="the name parameter is required")
-
-    result = do.tag.info(module.params["name"])
-
-    if "tag" not in result:
-        module.fail_json(msg="DO API error", result=result)
-
-    module.exit_json(changed=False, tag=result['tag'])
-
-
-def list(do, module):
-
-    result = do.tag.list()
-
-    if "tags" not in result:
-        module.fail_json(msg="DO API error", result=result)
-
-    module.exit_json(changed=False, tags=result["tags"])
-
-
-def names(do, module):
-
-    result = do.tag.names()
-
-    if "tags" not in result:
-        module.fail_json(msg="DO API error", result=result)
-
-    module.exit_json(changed=False, tags=result["tags"])
-
-
-def update(do, module):
-
-    result = None
-
-    if module.params["name"] is None:
-        module.fail_json(msg="the name parameter is required")
-
-    if module.params["new_name"] is None:
-        module.fail_json(msg="the new_name parameter is required")
-
-    result = do.tag.update(module.params["name"], module.params["new_name"])
-
-    if "tag" not in result:
-        module.fail_json(msg="DO API error", result=result)
-
-    module.exit_json(changed=True, tag=result['tag'])
-
-
-def build(do, module):
-
-    resources = []
-
-    if module.params["resource_type"] is not None and module.params["resource_id"] is not None:
-        resources.append({
-            "resource_type": module.params["resource_type"],
-            "resource_id": module.params["resource_id"]
-        })
-
-    if module.params["resource_type"] is not None and module.params["resource_ids"] is not None:
-        for resource_id in module.params["resource_ids"]:
-            resources.append({
-                "resource_type": module.params["resource_type"],
-                "resource_id": resource_id
-            })
-
-    if module.params["resources"] is not None:
-        resources.extend(copy.deepcopy(module.params["resources"]))
-
-    return resources
-
-
-def attach(do, module):
-
-    result = None
-
-    if module.params["name"] is None:
-        module.fail_json(msg="the name parameter is required")
-
-    resources = build(do, module)
-
-    if not resources:
-        module.fail_json(
-            msg="the resources or resource_type and resource_id(s) parameters are required"
-        )
-
-    result = do.tag.attach(module.params["name"], resources)
-
-    if "status" not in result:
-        module.fail_json(msg="DO API error", result=result)
-
-    module.exit_json(changed=True, result=result)
-
-
-def detach(do, module):
-
-    result = None
-
-    if module.params["name"] is None:
-        module.fail_json(msg="the name parameter is required")
-
-    resources = build(do, module)
-
-    if not resources:
-        module.fail_json(
-            msg="the resources or resource_type and resource_id(s) parameters are required"
-        )
-
-    result = do.tag.detach(module.params["name"], resources)
-
-    if "status" not in result:
-        module.fail_json(msg="DO API error", result=result)
-
-    module.exit_json(changed=True, result=result)
-
-
-def destroy(do, module):
-
-    result = None
-
-    if module.params["name"] is None:
-        module.fail_json(msg="the name parameter is required")
-
-    result = do.tag.destroy(module.params["name"])
-
-    if "status" not in result:
-        module.fail_json(msg="DO API error", result=result)
-
-    module.exit_json(changed=True, result=result)
-
-
-def main():
-
-    module = AnsibleModule(
-        argument_spec = dict(
+        return AnsibleModule(argument_spec=dict(
             action=dict(default=None, required=True, choices=[
                 "create",
                 "present",
@@ -276,38 +118,175 @@ def main():
             resource_type=dict(default=None),
             resource_id=dict(default=None),
             resource_ids=dict(default=None, type='list'),
-            url=dict(default="https://api.digitalocean.com/v2"),
-        )
-    )
+            url=dict(default=self.url),
+        ))
 
-    if not doboto_found:
-        module.fail_json(msg="the python doboto module is required")
+    def act(self):
 
-    token = module.params["token"]
+        getattr(self, self.module.params["action"])()
 
-    if token is None:
-        token = os.environ.get('DO_API_TOKEN', None)
+    def create(self):
 
-    if token is None:
-        module.fail_json(msg="the token parameter is required")
+        if self.module.params["name"] is None:
+            self.module.fail_json(msg="the name parameter is required")
 
-    do = DO(url=module.params["url"], token=token)
+        result = self.do.tag.create(self.module.params["name"])
 
-    if module.params["action"] == "create":
-        create(do, module)
-    elif module.params["action"] == "present":
-        present(do, module)
-    elif module.params["action"] == "info":
-        info(do, module)
-    elif module.params["action"] == "list":
-        list(do, module)
-    elif module.params["action"] == "update":
-        update(do, module)
-    elif module.params["action"] == "attach":
-        attach(do, module)
-    elif module.params["action"] == "detach":
-        detach(do, module)
-    elif module.params["action"] == "destroy":
-        destroy(do, module)
+        if "tag" not in result:
+            self.module.fail_json(msg="DO API error", result=result)
 
-main()
+        self.module.exit_json(changed=True, tag=result['tag'])
+
+    def present(self):
+
+        if self.module.params["name"] is None:
+            self.module.fail_json(msg="the name parameter is required")
+
+        result = self.do.tag.list()
+
+        if "tags" not in result:
+            self.module.fail_json(msg="DO API error", result=result)
+
+        tags = result["tags"]
+
+        existing = None
+        for tag in tags:
+            if self.module.params["name"] == tag["name"]:
+                existing = tag
+                break
+
+        if existing is not None:
+            self.module.exit_json(changed=False, tag=existing)
+        else:
+            self.create()
+
+    def info(self):
+
+        result = None
+
+        if self.module.params["name"] is None:
+            self.module.fail_json(msg="the name parameter is required")
+
+        result = self.do.tag.info(self.module.params["name"])
+
+        if "tag" not in result:
+            self.module.fail_json(msg="DO API error", result=result)
+
+        self.module.exit_json(changed=False, tag=result['tag'])
+
+    def list(self):
+
+        result = self.do.tag.list()
+
+        if "tags" not in result:
+            self.module.fail_json(msg="DO API error", result=result)
+
+        self.module.exit_json(changed=False, tags=result["tags"])
+
+    def names(self):
+
+        result = self.do.tag.names()
+
+        if "tags" not in result:
+            self.module.fail_json(msg="DO API error", result=result)
+
+        self.module.exit_json(changed=False, tags=result["tags"])
+
+    def update(self):
+
+        result = None
+
+        if self.module.params["name"] is None:
+            self.module.fail_json(msg="the name parameter is required")
+
+        if self.module.params["new_name"] is None:
+            self.module.fail_json(msg="the new_name parameter is required")
+
+        result = self.do.tag.update(self.module.params["name"], self.module.params["new_name"])
+
+        if "tag" not in result:
+            self.module.fail_json(msg="DO API error", result=result)
+
+        self.module.exit_json(changed=True, tag=result['tag'])
+
+    def build(self):
+
+        resources = []
+
+        if self.module.params["resource_type"] is not None and \
+           self.module.params["resource_id"] is not None:
+            resources.append({
+                "resource_type": self.module.params["resource_type"],
+                "resource_id": self.module.params["resource_id"]
+            })
+
+        if self.module.params["resource_type"] is not None and \
+           self.module.params["resource_ids"] is not None:
+            for resource_id in self.module.params["resource_ids"]:
+                resources.append({
+                    "resource_type": self.module.params["resource_type"],
+                    "resource_id": resource_id
+                })
+
+        if self.module.params["resources"] is not None:
+            resources.extend(copy.deepcopy(self.module.params["resources"]))
+
+        return resources
+
+    def attach(self):
+
+        result = None
+
+        if self.module.params["name"] is None:
+            self.module.fail_json(msg="the name parameter is required")
+
+        resources = self.build()
+
+        if not resources:
+            self.module.fail_json(
+                msg="the resources or resource_type and resource_id(s) parameters are required"
+            )
+
+        result = self.do.tag.attach(self.module.params["name"], resources)
+
+        if "status" not in result:
+            self.module.fail_json(msg="DO API error", result=result)
+
+        self.module.exit_json(changed=True, result=result)
+
+    def detach(self):
+
+        result = None
+
+        if self.module.params["name"] is None:
+            self.module.fail_json(msg="the name parameter is required")
+
+        resources = self.build()
+
+        if not resources:
+            self.module.fail_json(
+                msg="the resources or resource_type and resource_id(s) parameters are required"
+            )
+
+        result = self.do.tag.detach(self.module.params["name"], resources)
+
+        if "status" not in result:
+            self.module.fail_json(msg="DO API error", result=result)
+
+        self.module.exit_json(changed=True, result=result)
+
+    def destroy(self):
+
+        result = None
+
+        if self.module.params["name"] is None:
+            self.module.fail_json(msg="the name parameter is required")
+
+        result = self.do.tag.destroy(self.module.params["name"])
+
+        if "status" not in result:
+            self.module.fail_json(msg="DO API error", result=result)
+
+        self.module.exit_json(changed=True, result=result)
+
+Tag()
