@@ -20,6 +20,30 @@
   with_items: "{{ clear_droplets.droplets }}"
   ignore_errors: yes
 
+- name: clear | snapshots | list
+  doboto_snapshot:
+    action: list
+  register: clear_snapshots
+
+- name: clear | snapshots | destroy
+  doboto_snapshot:
+    action: destroy
+    id: "{{ item.id }}"
+  with_items: "{{ clear_snapshots.snapshots }}"
+  ignore_errors: yes
+
+- name: clear | volumes | list
+  doboto_volume:
+    action: list
+  register: clear_volumes
+
+- name: clear | volumes | destroy
+  doboto_volume:
+    action: destroy
+    id: "{{ item.id }}"
+  with_items: "{{ clear_volumes.volumes }}"
+  ignore_errors: yes
+
 - name: clear | images | list
   doboto_image:
     action: list

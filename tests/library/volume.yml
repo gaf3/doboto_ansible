@@ -1,0 +1,243 @@
+- name: volume | create
+  doboto_volume:
+    token: "{{ lookup('env','DO_API_TOKEN') }}"
+    action: create
+    name: volume-create
+    region: nyc1
+    size_gigabytes: 1
+    description: "A nice one"
+  register: volume_create
+
+- name: volume | create  | verify
+  assert:
+    that:
+      - "{{ volume_create.volume.name == 'volume-create' }}"
+      - "{{ volume_create.volume.region.slug == 'nyc1' }}"
+      - "{{ volume_create.volume.size_gigabytes == 1 }}"
+      - "{{ volume_create.volume.description == 'A nice one' }}"
+      - "{{ volume_create.volume.droplet_ids == [] }}"
+    msg: "{{ volume_create }}"
+
+- name: volume | list
+  doboto_volume:
+    action: list
+  register: volume_list
+
+- name: volume | list | verify
+  assert:
+    that:
+      - "{{ volume_list.volumes[0].id == volume_create.volume.id }}"
+    msg: "{{ volume_list }}"
+
+- name: volume | info | by id
+  doboto_volume:
+    action: info
+    id: "{{ volume_create.volume.id }}"
+  register: volume_info_id
+
+- name: volume | info | by id | verify
+  assert:
+    that:
+      - "{{ volume_info_id.volume.name == 'volume-create' }}"
+    msg: "{{ volume_info_id }}"
+
+- name: volume | info | by name region
+  doboto_volume:
+    action: info
+    name: volume-create
+    region: nyc1
+  register: volume_info_name_region
+
+- name: volume | info | by name region | verify
+  assert:
+    that:
+      - "{{ volume_info_name_region.volume.id == volume_create.volume.id }}"
+    msg: "{{ volume_info_name_region }}"
+
+- name: volume | snapshot
+  doboto_volume:
+    action: snapshot
+    id: "{{ volume_create.volume.id }}"
+    snapshot_name: bulletproof
+  register: volume_snapshot
+
+- name: volume | snapshot | verify
+  assert:
+    that:
+      - "{{ volume_snapshot.snapshot.name == 'bulletproof' }}"
+    msg: "{{ volume_snapshot }}"
+
+- name: volume | snapshots
+  doboto_volume:
+    action: snapshots
+    id: "{{ volume_create.volume.id }}"
+  register: volume_snapshots
+
+- name: volume | snapshots | verify
+  assert:
+    that:
+      - "{{ volume_snapshots.snapshots[0] == volume_snapshot.snapshot }}"
+    msg: "{{ volume_snapshots }}"
+
+- name: volume | droplet | create
+  doboto_droplet:
+    action: create
+    name: volume-droplet
+    region: nyc1
+    size: 1gb
+    image: debian-7-0-x64
+    wait: true
+  register: volume_droplet
+
+- name: volume | create | by snapshot
+  doboto_volume:
+    action: create
+    name: volume-create-snapshot
+    snapshot_id: "{{ volume_snapshot.snapshot.id }}"
+    size_gigabytes: 2
+    description: "A bad one"
+    wait: true
+  register: volume_create_snapshot
+
+- name: volume | create  | verify | by snapshot
+  assert:
+    that:
+      - "{{ volume_create_snapshot.volume.name == 'volume-create-snapshot' }}"
+      - "{{ volume_create_snapshot.volume.region.slug == 'nyc1' }}"
+      - "{{ volume_create_snapshot.volume.size_gigabytes == 1 }}"
+      - "{{ volume_create_snapshot.volume.description == 'A bad one' }}"
+      - "{{ volume_create_snapshot.volume.droplet_ids == [] }}"
+    msg: "{{ volume_create_snapshot }}"
+
+- name: volume | attach | by id
+  doboto_volume:
+    action: attach
+    id: "{{ volume_create.volume.id }}"
+    droplet_id: "{{ volume_droplet.droplet.id }}"
+    wait: true
+  register: volume_attach_id
+
+- name: volume | attach | by id | verify
+  assert:
+    that:
+      - "{{ volume_attach_id.action.type == 'attach_volume' }}"
+      - "{{ volume_attach_id.action.resource_type == 'backend' }}"
+      - "{{ volume_attach_id.action.status == 'completed' }}"
+    msg: "{{ volume_attach_id }}"
+
+- name: volume | attach | by name
+  doboto_volume:
+    action: attach
+    name: volume-create-snapshot
+    region: nyc1
+    droplet_id: "{{ volume_droplet.droplet.id }}"
+    wait: true
+  register: volume_attach_name
+
+- name: volume | attach | by name | verify
+  assert:
+    that:
+      - "{{ volume_attach_name.action.type == 'attach_volume' }}"
+      - "{{ volume_attach_name.action.resource_type == 'backend' }}"
+      - "{{ volume_attach_name.action.status == 'completed' }}"
+    msg: "{{ volume_attach_name }}"
+
+- name: volume | detach | by id
+  doboto_volume:
+    action: detach
+    id: "{{ volume_create.volume.id }}"
+    droplet_id: "{{ volume_droplet.droplet.id }}"
+    wait: true
+  register: volume_detach_id
+
+- name: volume | detach | by id | verify
+  assert:
+    that:
+      - "{{ volume_detach_id.action.type == 'detach_volume' }}"
+      - "{{ volume_detach_id.action.resource_type == 'backend' }}"
+      - "{{ volume_detach_id.action.status == 'completed' }}"
+    msg: "{{ volume_detach_id }}"
+
+- name: volume | detach | by name
+  doboto_volume:
+    action: detach
+    name: volume-create-snapshot
+    region: nyc1
+    droplet_id: "{{ volume_droplet.droplet.id }}"
+    wait: true
+  register: volume_detach_name
+
+- name: volume | detach | by name | verify
+  assert:
+    that:
+      - "{{ volume_detach_name.action.type == 'detach_volume' }}"
+      - "{{ volume_detach_name.action.resource_type == 'backend' }}"
+      - "{{ volume_detach_name.action.status == 'completed' }}"
+    msg: "{{ volume_detach_name }}"
+
+- name: volume | resize
+  doboto_volume:
+    action: resize
+    id: "{{ volume_create.volume.id }}"
+    size_gigabytes: 3
+  register: volume_resize
+
+- name: volume | resize | verify
+  assert:
+    that:
+      - "{{ volume_resize.action.type == 'resize_volume' }}"
+      - "{{ volume_resize.action.resource_type == 'backend' }}"
+      - "{{ volume_resize.action.status == 'completed' }}"
+    msg: "{{ volume_resize }}"
+
+- name: volume | actions
+  doboto_volume:
+    action: actions
+    id: "{{ volume_create.volume.id }}"
+  register: volume_actions
+
+- name: volume | actions | verify
+  assert:
+    that:
+      - "{{ volume_actions|length > 0 }}"
+    msg: "{{ volume_actions }}"
+
+- name: volume | action_info
+  doboto_volume:
+    action: action_info
+    id: "{{ volume_create.volume.id }}"
+    action_id: "{{ volume_attach_id.action.id }}"
+  register: volume_action_info
+
+- name: volume | action_info | verify
+  assert:
+    that:
+      - "{{ volume_action_info.action.type == 'attach_volume' }}"
+      - "{{ volume_action_info.action.resource_type == 'backend' }}"
+      - "{{ volume_action_info.action.status == 'completed' }}"
+    msg: "{{ volume_action_info }}"
+
+- name: volume | destroy | by id
+  doboto_volume:
+    action: destroy
+    id: "{{ volume_create.volume.id }}"
+  register: volume_destroy_id
+
+- name: volume | destroy | by id | verify
+  assert:
+    that:
+      - "{{ volume_destroy_id.result.status == 204 }}"
+    msg: "{{ volume_destroy_id }}"
+
+- name: volume | destroy | by name region
+  doboto_volume:
+    action: destroy
+    name: volume-create-snapshot
+    region: nyc1
+  register: volume_destroy_name_region
+
+- name: volume | destroy | by name region | verify
+  assert:
+    that:
+      - "{{ volume_destroy_name_region.result.status == 204 }}"
+    msg: "{{ volume_destroy_name_region }}"

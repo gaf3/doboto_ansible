@@ -2,12 +2,14 @@
 # -*- coding: utf-8 -*-
 
 import os
+import time
+import copy
 from ansible.module_utils.basic import AnsibleModule
 from doboto.DO import DO
 
 """
 
-Ansible module to manage DigitalOcean actions
+Ansible module to manage DigitalOcean snapshots
 (c) 2017, SWE Data <swe-data@do.co>
 
 This file is part of Ansible
@@ -27,11 +29,11 @@ along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 
 DOCUMENTATION = '''
 ---
-module: doboto_action
+module: doboto_snapshot
 
-short_description: Manage DigitalOcean Actions
+short_description: Manage DigitalOcean snapshots
 description:
-    - Manages DigitalOcean actions
+    - Manages DigitalOcean Snapshots
 version_added: "0.1"
 author: "SWE Data <swe-data@do.co>"
 options:
@@ -39,23 +41,28 @@ options:
         description:
             - token to use to connect to the API (uses DO_API_TOKEN from ENV if not found)
     action:
-        action action
+        snapshot action
         choices:
-            - list
             - info
+            - list
+            - destroy
     id:
         description:
-            - (Action ID) same as DO API variable
+            - same as DO API variable (snapshot id)
+    resource_type:
+        description:
+            - same as DO API variable
     url:
         description:
             - URL to use if not official (for experimenting)
+
 '''
 
 EXAMPLES = '''
 '''
 
 
-class Action(object):
+class Snapshot(object):
 
     url = "https://api.digitalocean.com/v2"
 
@@ -79,11 +86,15 @@ class Action(object):
 
         return AnsibleModule(argument_spec=dict(
             action=dict(default=None, required=True, choices=[
-                "list", "info"
+                "info",
+                "list",
+                "destroy"
             ]),
             token=dict(default=None),
             id=dict(default=None),
+            resource_type=dict(default=None),
             url=dict(default=self.url),
+            extra=dict(default=None, type='dict'),
         ))
 
     def act(self):
@@ -92,26 +103,38 @@ class Action(object):
 
     def list(self):
 
-        result = self.do.action.list()
+        result = None
 
-        if "actions" not in result:
+        result = self.do.snapshot.list(resource_type=self.module.params["resource_type"])
+
+        if "snapshots" not in result:
             self.module.fail_json(msg="DO API error", result=result)
 
-        self.module.exit_json(changed=False, actions=result["actions"])
+        self.module.exit_json(changed=False, snapshots=result["snapshots"])
 
     def info(self):
-
-        result = None
 
         if self.module.params["id"] is None:
             self.module.fail_json(msg="the id parameter is required")
 
-        result = self.do.action.info(self.module.params["id"])
+        result = self.do.snapshot.info(id=self.module.params["id"])
 
-        if "action" not in result:
+        if "snapshot" not in result:
             self.module.fail_json(msg="DO API error", result=result)
 
-        self.module.exit_json(changed=False, action=result["action"])
+        self.module.exit_json(changed=False, snapshot=result["snapshot"])
+
+    def destroy(self):
+
+        if self.module.params["id"] is None:
+            self.module.fail_json(msg="the id parameter is required")
+
+        result = self.do.snapshot.destroy(id=self.module.params["id"])
+
+        if "status" not in result:
+            self.module.fail_json(msg="DO API error", result=result)
+
+        self.module.exit_json(changed=True, result=result)
 
 
-Action()
+Snapshot()
