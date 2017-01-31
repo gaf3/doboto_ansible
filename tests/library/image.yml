@@ -4,7 +4,7 @@
     slug: "debian-7-0-x64"
   register: image_info_slug
 
-- name: image | info | by lug | verify
+- name: image | info | by slug | verify
   assert:
     that:
       - "{{ image_info_slug.image.slug == 'debian-7-0-x64' }}"
