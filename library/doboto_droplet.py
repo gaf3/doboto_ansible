@@ -35,7 +35,7 @@ short_description: Manage DigitalOcean droplets
 description:
     - Manages DigitalOcean droplets
 version_added: "0.1"
-author: "Gaffer Fitch <gfitch@digitalocean.com>"
+author: "SWE Data <swe-data@do.co>"
 options:
     token:
         description:
