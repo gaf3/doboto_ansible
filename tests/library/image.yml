@@ -1,0 +1,173 @@
+- name: image | info | by slug
+  doboto_image:
+    action: info
+    slug: "debian-7-0-x64"
+  register: image_info_slug
+
+- name: image | info | by lug | verify
+  assert:
+    that:
+      - "{{ image_info_slug.image.slug == 'debian-7-0-x64' }}"
+    msg: "{{ image_info_slug }}"
+
+- name: image | info | by id
+  doboto_image:
+    action: info
+    id: "{{ image_info_slug.image.id }}"
+  register: image_info_id
+
+- name: image | info | by id | verify
+  assert:
+    that:
+      - "{{ image_info_id.image.slug == 'debian-7-0-x64' }}"
+    msg: "{{ image_info_id }}"
+
+- name: image | droplet | create
+  doboto_droplet:
+    action: create
+    name: image-droplet
+    region: nyc3
+    size: 1gb
+    image: debian-7-0-x64
+    wait: true
+  register: image_droplet
+
+- name: image | droplet | snapshot
+  doboto_droplet:
+    action: snapshot
+    id: "{{ image_droplet.droplet.id }}"
+    name: "how-bow-dah"
+    wait: true
+  register: image_snapshot
+
+- name: image | list
+  doboto_image:
+    action: list
+  register: image_list
+
+- name: image | list | verify
+  assert:
+    that:
+      - "{{ image_list.images|length > 0 }}"
+    msg: "{{ image_list }}"
+
+- name: image | list | distribution
+  doboto_image:
+    action: list
+    type: distribution
+  register: image_list_distribution
+
+- name: image | list | distribution | verify
+  assert:
+    that:
+      - "{{ image_list_distribution.images|length > 0 }}"
+      - "{{ image_list_distribution.images|length < image_list.images|length }}"
+    msg: "{{ image_list_distribution }}"
+
+- name: image | list | application
+  doboto_image:
+    action: list
+    type: application
+  register: image_list_application
+
+- name: image | list | application | verify
+  assert:
+    that:
+      - "{{ image_list_application.images|length > 0 }}"
+      - "{{ image_list_application.images|length < image_list.images|length }}"
+    msg: "{{ image_list_application }}"
+
+- name: image | list | user
+  doboto_image:
+    action: list
+    private: true
+  register: image_list_user
+
+- name: image | list | user | verify
+  assert:
+    that:
+      - "{{ image_list_user.images|length > 0 }}"
+    msg: "{{ image_list_user }}"
+
+- name: image | snapshot | fact
+  set_fact:
+    image_snapshot: "{{image_list_user|json_query(image_snapshot_query)}}"
+  vars:
+    image_snapshot_query: "images[?type=='snapshot'] | [0]"
+
+- name: image | snapshot | fact | verify
+  assert:
+    that:
+      - "{{ image_snapshot.name == 'how-bow-dah' }}"
+    msg: "{{ image_snapshot }}"
+
+- name: image | update
+  doboto_image:
+    action: update
+    id: "{{ image_snapshot.id }}"
+    name: "cash-me-ousside"
+  register: image_update
+
+- name: image | update | verify
+  assert:
+    that:
+      - "{{ image_update.image.name == 'cash-me-ousside' }}"
+    msg: "{{ image_update }}"
+
+- name: image | transfer
+  doboto_image:
+    action: transfer
+    id: "{{ image_snapshot.id }}"
+    region: nyc2
+  register: image_transfer
+
+- name: image | transfer | verify
+  assert:
+    that:
+      - "{{ image_transfer.action.type == 'transfer' }}"
+      - "{{ image_transfer.action.resource_type == 'image' }}"
+      - "{{ image_transfer.action.resource_id == image_snapshot.id }}"
+      - "{{ image_transfer.action.status == 'in-progress' }}"
+    msg: "{{ image_transfer }}"
+
+- name: image | actions
+  doboto_image:
+    action: actions
+    id: "{{ image_snapshot.id }}"
+  register: image_actions
+
+- name: image | actions | verify
+  assert:
+    that:
+      - "{{ image_actions|json_query(image_transfer_query) == image_transfer.action.id }}"
+    msg: "{{ image_actions }}"
+  vars:
+    image_transfer_query: "actions[?type=='transfer'].id | [0]"
+
+- name: image | action_info
+  doboto_image:
+    action: action_info
+    id: "{{ image_snapshot.id }}"
+    action_id: "{{ image_transfer.action.id }}"
+  register: image_action_info
+
+- name: image | action_info | verify
+  assert:
+    that:
+      - "{{ image_action_info.action.type == 'transfer' }}"
+      - "{{ image_action_info.action.resource_type == 'image' }}"
+      - "{{ image_action_info.action.resource_id == image_snapshot.id }}"
+      - "{{ image_action_info.action.status == 'in-progress' }}"
+    msg: "{{ image_action_info }}"
+
+- name: image | destroy
+  doboto_image:
+    action: destroy
+    id: "{{ image_snapshot.id }}"
+  register: image_destroy
+
+- name: image | destroy | verify
+  assert:
+    that:
+      - "{{ image_destroy.result.status == 204 }}"
+    msg: "{{ image_destroy }}"

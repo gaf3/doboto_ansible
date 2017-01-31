@@ -25,6 +25,11 @@
 
   - block:
     - include: library/clear.yml
+    - include: library/image.yml
+    tags: image
+
+  - block:
+    - include: library/clear.yml
     - include: library/droplet_action.yml
     tags: droplet_action
 

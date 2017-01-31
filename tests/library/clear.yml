@@ -20,6 +20,29 @@
   with_items: "{{ clear_droplets.droplets }}"
   ignore_errors: yes
 
+- name: clear | images | list
+  doboto_image:
+    action: list
+    private: true
+  register: clear_images
+
+- name: clear | images | convert
+  doboto_image:
+    action: convert
+    id: "{{ item.id }}"
+    wait: true
+  with_items: "{{ clear_images|json_query(image_backup_query) }}"
+  vars:
+    image_backup_query: "images[?type=='backup']"
+  ignore_errors: yes
+
+- name: clear | images | destroy
+  doboto_image:
+    action: destroy
+    id: "{{ item.id }}"
+  with_items: "{{ clear_images.images }}"
+  ignore_errors: yes
+
 - name: clear | ssh keys | list
   doboto_ssh_key:
     action: list
