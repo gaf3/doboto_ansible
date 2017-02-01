@@ -1,0 +1,138 @@
+- name: floating_ip | droplet | create
+  doboto_droplet:
+    action: create
+    name: floating-ip-droplet
+    region: nyc1
+    size: 1gb
+    image: debian-7-0-x64
+    wait: true
+  register: floating_ip_droplet
+
+- name: floating_ip | create | droplet
+  doboto_floating_ip:
+    token: "{{ lookup('env','DO_API_TOKEN') }}"
+    action: create
+    droplet_id: "{{ floating_ip_droplet.droplet.id }}"
+    wait: true
+  register: floating_ip_create_droplet
+
+- name: floating_ip | create | droplet | verify
+  assert:
+    that:
+      - "{{ floating_ip_create_droplet.floating_ip.droplet.id == floating_ip_droplet.droplet.id }}"
+    msg: "{{ floating_ip_create_droplet }}"
+
+- name: floating_ip | create | region
+  doboto_floating_ip:
+    action: create
+    region: nyc1
+    wait: true
+  register: floating_ip_create_region
+
+- name: floating_ip | create | region | verify
+  assert:
+    that:
+      - "{{ floating_ip_create_region.floating_ip.region.slug == 'nyc1' }}"
+    msg: "{{ floating_ip_create_region }}"
+
+- name: floating_ip | list
+  doboto_floating_ip:
+    action: list
+  register: floating_ip_list
+
+- name: floating_ip | list | verify
+  assert:
+    that:
+      - "{{ floating_ip_list.floating_ips|length == 2 }}"
+    msg: "{{ floating_ip_list }}"
+
+- name: floating_ip | info
+  doboto_floating_ip:
+    action: info
+    ip: "{{ floating_ip_create_region.floating_ip.ip }}"
+  register: floating_ip_info
+
+- name: floating_ip | info | verify
+  assert:
+    that:
+      - "{{ floating_ip_info.floating_ip.ip == floating_ip_create_region.floating_ip.ip }}"
+    msg: "{{ floating_ip_info }}"
+
+- name: floating_ip | droplet | assign
+  doboto_droplet:
+    action: create
+    name: floating-ip-assign
+    region: nyc1
+    size: 1gb
+    image: debian-7-0-x64
+    wait: true
+  register: floating_ip_assign
+
+- name: floating_ip | assign
+  doboto_floating_ip:
+    action: assign
+    ip: "{{ floating_ip_create_region.floating_ip.ip }}"
+    droplet_id: "{{ floating_ip_assign.droplet.id }}"
+    wait: true
+  register: floating_ip_assign
+
+- name: floating_ip | assign | verify
+  assert:
+    that:
+      - "{{ floating_ip_assign.action.type == 'assign_ip' }}"
+      - "{{ floating_ip_assign.action.resource_type == 'floating_ip' }}"
+    msg: "{{ floating_ip_assign }}"
+
+- name: floating_ip | unassign
+  doboto_floating_ip:
+    action: unassign
+    ip: "{{ floating_ip_create_region.floating_ip.ip }}"
+    wait: true
+  register: floating_ip_unassign
+
+- name: floating_ip | assign | verify
+  assert:
+    that:
+      - "{{ floating_ip_unassign.action.type == 'unassign_ip' }}"
+      - "{{ floating_ip_unassign.action.resource_type == 'floating_ip' }}"
+    msg: "{{ floating_ip_unassign }}"
+
+- name: floating_ip | actions
+  doboto_floating_ip:
+    action: actions
+    ip: "{{ floating_ip_create_region.floating_ip.ip }}"
+  register: floating_ip_actions
+
+- name: floating_ip | actions | verify
+  assert:
+    that:
+      - "{{ floating_ip_actions|json_query(floating_ip_unassign_query) == floating_ip_unassign.action.id }}"
+    msg: "{{ floating_ip_actions }}"
+  vars:
+    floating_ip_unassign_query: "actions[?type=='unassign_ip'].id | [0]"
+
+- name: floating_ip | action_info
+  doboto_floating_ip:
+    action: action_info
+    ip: "{{ floating_ip_create_region.floating_ip.ip }}"
+    action_id: "{{ floating_ip_unassign.action.id }}"
+  register: floating_ip_action_info
+
+- name: floating_ip | action_info | verify
+  assert:
+    that:
+      - "{{ floating_ip_action_info.action.type == 'unassign_ip' }}"
+      - "{{ floating_ip_action_info.action.resource_type == 'floating_ip' }}"
+    msg: "{{ floating_ip_action_info }}"
+
+- name: floating_ip | destroy
+  doboto_floating_ip:
+    action: destroy
+    ip: "{{ floating_ip_create_region.floating_ip.ip }}"
+  register: floating_ip_destroy
+
+- name: floating_ip | destroy | verify
+  assert:
+    that:
+      - "{{ floating_ip_destroy.result.status == 204 }}"
+    msg: "{{ floating_ip_destroy }}"

@@ -291,7 +291,7 @@ class Volume(object):
 
         self.module.exit_json(changed=True, result=result)
 
-    def action_result(self, id, result):
+    def action_result(self, result):
 
         if "action" in result:
 
@@ -302,7 +302,7 @@ class Volume(object):
             while self.module.params["wait"] and result["action"]["status"] == "in-progress":
 
                 time.sleep(self.module.params["poll"])
-                latest = self.do.volume.action_info(id, action["id"])
+                latest = self.do.action.info(action["id"])
                 if "action" in latest:
                     result = latest
 
@@ -330,8 +330,6 @@ class Volume(object):
                 region=self.module.params["region"]
             )
 
-            self.action_result(self.module.params["id"], result)
-
         elif self.module.params["name"] is not None and self.module.params["region"] is not None:
 
             result = self.do.volume.attach(
@@ -340,18 +338,11 @@ class Volume(object):
                 region=self.module.params["region"]
             )
 
-            info = self.do.volume.info(
-                name=self.module.params["name"], region=self.module.params["region"]
-            )
-
-            if "volumes" not in info:
-                self.module.fail_json(msg="DO API error", result=info)
-
-            self.action_result(info["volumes"][0]["id"], result)
-
         else:
 
             self.module.fail_json(msg="the id or name and region parameters are required")
+
+        self.action_result(result)
 
     def detach(self):
 
@@ -368,9 +359,7 @@ class Volume(object):
                 region=self.module.params["region"]
             )
 
-            self.action_result(self.module.params["id"], result)
-
-        elif self.module.params["name"] is not None and self.module.params["region"] is not None:
+        elif self.module.params["name"] is not None:
 
             result = self.do.volume.detach(
                 name=self.module.params["name"],
@@ -378,18 +367,11 @@ class Volume(object):
                 region=self.module.params["region"]
             )
 
-            info = self.do.volume.info(
-                name=self.module.params["name"], region=self.module.params["region"]
-            )
-
-            if "volumes" not in info:
-                self.module.fail_json(msg="DO API error", result=info)
-
-            self.action_result(info["volumes"][0]["id"], result)
-
         else:
 
             self.module.fail_json(msg="the id or name and region parameters are required")
+
+        self.action_result(result)
 
     def resize(self):
 
@@ -407,7 +389,7 @@ class Volume(object):
             region=self.module.params["region"]
         )
 
-        self.action_result(self.module.params["id"], result)
+        self.action_result(result)
 
     def actions(self):
 

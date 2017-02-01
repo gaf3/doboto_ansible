@@ -50,5 +50,20 @@
 
   - block:
     - include: library/clear.yml
+    - include: library/region.yml
+    tags: region
+
+  - block:
+    - include: library/clear.yml
+    - include: library/size.yml
+    tags: size
+
+  - block:
+    - include: library/clear.yml
+    - include: library/floating_ip.yml
+    tags: floating_ip
+
+  - block:
+    - include: library/clear.yml
     - include: library/tag.yml
     tags: tag
