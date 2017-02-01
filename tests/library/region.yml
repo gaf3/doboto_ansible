@@ -1,0 +1,12 @@
+- name: region | list
+  doboto_region:
+    action: list
+  register: region_list
+
+- name: region | list | verify
+  assert:
+    that:
+      - "{{ region_list|json_query(region_slug_query) == 'New York 1' }}"
+    msg: "{{ region_list }}"
+  vars:
+    region_slug_query: "regions[?slug=='nyc1'].name | [0]"

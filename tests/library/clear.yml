@@ -100,6 +100,17 @@
     - /tmp/id_doboto_present
     - /tmp/id_doboto_present.pub
 
+- name: clear | floating ips | list
+  doboto_floating_ip:
+    action: list
+  register: clear_floating_ips
+
+- name: clear | floating ips | destory
+  doboto_floating_ip:
+    action: destroy
+    ip: "{{ item.ip }}"
+  with_items: "{{ clear_floating_ips.floating_ips }}"
+
 - name: clear | tags | list
   doboto_tag:
     action: list

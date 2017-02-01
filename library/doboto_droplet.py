@@ -493,7 +493,7 @@ class Droplet(object):
             while self.module.params["wait"] and result["action"]["status"] == "in-progress":
 
                 time.sleep(self.module.params["poll"])
-                latest = self.do.droplet.action_info(action["resource_id"], action["id"])
+                latest = self.do.action.info(action["id"])
                 if "action" in latest:
                     result = latest
 

@@ -1,0 +1,12 @@
+- name: size | list
+  doboto_size:
+    action: list
+  register: size_list
+
+- name: size | list | verify
+  assert:
+    that:
+      - "{{ size_list|json_query(size_slug_query) == 512 }}"
+    msg: "{{ size_list }}"
+  vars:
+    size_slug_query: "sizes[?slug=='512mb'].memory | [0]"
