@@ -1,0 +1,124 @@
+- name: domain | create
+  doboto_domain:
+    token: "{{ lookup('env','DO_API_TOKEN') }}"
+    action: create
+    name: domain.create.com
+    ip_address: "1.2.3.4"
+  register: domain_create
+
+- name: domain | create  | verify
+  assert:
+    that:
+      - "{{ domain_create.domain.name == 'domain.create.com' }}"
+    msg: "{{ domain_create }}"
+
+- name: domain | list
+  doboto_domain:
+    action: list
+  register: domain_list
+
+- name: domain | list | verify
+  assert:
+    that:
+      - "{{ domain_list.domains[0].name == domain_create.domain.name }}"
+    msg: "{{ domain_list }}"
+
+- name: domain | info
+  doboto_domain:
+    action: info
+    name: domain.create.com
+  register: domain_info
+
+- name: domain | info | verify
+  assert:
+    that:
+      - "{{ domain_info.domain.name == domain_create.domain.name }}"
+    msg: "{{ domain_info }}"
+
+- name: domain | records
+  doboto_domain:
+    action: records
+    name: domain.create.com
+  register: domain_records
+
+- name: domain | records | verify
+  assert:
+    that:
+      - "{{ domain_records|json_query(records_A_query) == '1.2.3.4' }}"
+    msg: "{{ domain_records }}"
+  vars:
+    records_A_query: "domain_records[?type=='A'].data | [0]"
+
+- name: domain | record | create
+  doboto_domain:
+    action: record_create
+    name: domain.create.com
+    record_type: CNAME
+    record_name: www.domain.create.com
+    record_data: domain.create.com.
+  register: domain_record_create
+
+- name: domain | record | create  | verify
+  assert:
+    that:
+      - "{{ domain_record_create.domain_record.type == 'CNAME' }}"
+      - "{{ domain_record_create.domain_record.name == 'www.domain.create.com' }}"
+      - "{{ domain_record_create.domain_record.data == '@' }}"
+    msg: "{{ domain_record_create }}"
+
+- name: domain | record | info
+  doboto_domain:
+    action: record_info
+    name: domain.create.com
+    record_id: "{{ domain_record_create.domain_record.id }}"
+  register: domain_record_info
+
+- name: domain | record | info | verify
+  assert:
+    that:
+      - "{{ domain_record_info.domain_record.type == 'CNAME' }}"
+      - "{{ domain_record_info.domain_record.name == 'www.domain.create.com' }}"
+      - "{{ domain_record_info.domain_record.data == '@' }}"
+    msg: "{{ domain_record_info }}"
+
+- name: domain | record | update
+  doboto_domain:
+    action: record_update
+    name: domain.create.com
+    record_id: "{{ domain_record_create.domain_record.id }}"
+    record_name: w2.domain.create.com
+    record_data: domain.create.com.
+  register: domain_record_update
+
+- name: domain | update  | verify
+  assert:
+    that:
+      - "{{ domain_record_update.domain_record.type == 'CNAME' }}"
+      - "{{ domain_record_update.domain_record.name == 'w2.domain.create.com' }}"
+      - "{{ domain_record_update.domain_record.data == '@' }}"
+    msg: "{{ domain_record_update }}"
+
+- name: domain | record | destroy
+  doboto_domain:
+    action: record_destroy
+    name: domain.create.com
+    record_id: "{{ domain_record_create.domain_record.id }}"
+  register: domain_record_destroy
+
+- name: domain | record | destroy | verify
+  assert:
+    that:
+      - "{{ domain_record_destroy.result.status == 204 }}"
+    msg: "{{ domain_record_destroy }}"
+
+- name: domain | destroy
+  doboto_domain:
+    action: destroy
+    name: domain.create.com
+  register: domain_destroy
+
+- name: domain | destroy | verify
+  assert:
+    that:
+      - "{{ domain_destroy.result.status == 204 }}"
+    msg: "{{ domain_destroy }}"

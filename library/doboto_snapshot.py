@@ -93,8 +93,7 @@ class Snapshot(object):
             token=dict(default=None),
             id=dict(default=None),
             resource_type=dict(default=None),
-            url=dict(default=self.url),
-            extra=dict(default=None, type='dict'),
+            url=dict(default=self.url)
         ))
 
     def act(self):
