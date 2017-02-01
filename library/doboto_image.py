@@ -135,8 +135,7 @@ class Image(object):
             poll=dict(default=5, type='int'),
             timeout=dict(default=300, type='int'),
             action_id=dict(default=None),
-            url=dict(default=self.url),
-            extra=dict(default=None, type='dict'),
+            url=dict(default=self.url)
         ))
 
     def act(self):

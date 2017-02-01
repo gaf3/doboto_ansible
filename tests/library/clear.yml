@@ -8,6 +8,18 @@
       - "{{ account_info.account.uuid == 'b60c5d2212bf79e1a2bb0e3c1b2ae30a617fb796' }}"
     msg: "{{ account_info }}"
 
+- name: clear | domains | list
+  doboto_domain:
+    action: list
+  register: clear_domains
+
+- name: clear | domains | destroy
+  doboto_domain:
+    action: destroy
+    name: "{{ item.name }}"
+  with_items: "{{ clear_domains.domains }}"
+  ignore_errors: yes
+
 - name: clear | droplets | list
   doboto_droplet:
     action: list

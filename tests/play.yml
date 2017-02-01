@@ -30,6 +30,11 @@
 
   - block:
     - include: library/clear.yml
+    - include: library/domain.yml
+    tags: domain
+
+  - block:
+    - include: library/clear.yml
     - include: library/image.yml
     tags: image
 
