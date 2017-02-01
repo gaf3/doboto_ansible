@@ -10,7 +10,7 @@ from doboto.DO import DO
 """
 
 Ansible module to manage DigitalOcean tags
-(c) 2017, Gaffer Fitch <gfitch@digitalocean.com>
+(c) 2017, SWE Data <swe-data@do.co>
 
 This file is part of Ansible
 
@@ -41,7 +41,7 @@ options:
         description:
             - token to use to connect to the API (uses DO_API_TOKEN from ENV if not found)
     action:
-        ssh key action
+        tag action
         choices:
             - create
             - present

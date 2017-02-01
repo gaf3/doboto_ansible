@@ -1,0 +1,92 @@
+- name: snapshot | droplet | create
+  doboto_droplet:
+    action: create
+    name: snapshot-droplet
+    region: nyc1
+    size: 1gb
+    image: debian-7-0-x64
+    wait: true
+  register: snapshot_droplet
+
+- name: snapshot | droplet | snapshot
+  doboto_droplet:
+    action: snapshot
+    id: "{{ snapshot_droplet.droplet.id }}"
+    name: "how-bow-dah"
+    wait: true
+  register: snapshot_droplet_snapshot
+
+- name: snapshot | volume | create
+  doboto_volume:
+    action: create
+    name: snapshot-volume
+    region: nyc1
+    size_gigabytes: 1
+    description: "A nice one"
+  register: snapshot_volume
+
+- name: snapshot | volume | snapshot
+  doboto_volume:
+    action: snapshot
+    id: "{{ snapshot_volume.volume.id }}"
+    snapshot_name: "cash-me-ousside"
+  register: volume_snapshot
+
+- name: snapshot | list
+  doboto_snapshot:
+    action: list
+  register: snapshot_list
+
+- name: snapshot | list | verify
+  assert:
+    that:
+      - "{{ snapshot_list|length == 2 }}"
+    msg: "{{ snapshot_list }}"
+
+- name: snapshot | list | droplet
+  doboto_snapshot:
+    action: list
+    resource_type: droplet
+  register: snapshot_list_droplet
+
+- name: snapshot | list | droplet | verify
+  assert:
+    that:
+      - "{{ snapshot_list_droplet.snapshots[0].name == 'how-bow-dah' }}"
+    msg: "{{ snapshot_list_droplet }}"
+
+- name: snapshot | list | volume
+  doboto_snapshot:
+    action: list
+    resource_type: volume
+  register: snapshot_list_volume
+
+- name: snapshot | list | volume | verify
+  assert:
+    that:
+      - "{{ snapshot_list_volume.snapshots[0].name == 'cash-me-ousside' }}"
+    msg: "{{ snapshot_list_volume }}"
+
+- name: snapshot | info
+  doboto_snapshot:
+    action: info
+    id: "{{ snapshot_list_droplet.snapshots[0].id }}"
+  register: snapshot_info
+
+- name: snapshot | info | verify
+  assert:
+    that:
+      - "{{ snapshot_info.snapshot.name == 'how-bow-dah' }}"
+    msg: "{{ snapshot_info }}"
+
+- name: snapshot | destroy | by id
+  doboto_snapshot:
+    action: destroy
+    id: "{{ snapshot_list_volume.snapshots[0].id }}"
+  register: volume_destroy
+
+- name: snapshot | destroy | verify
+  assert:
+    that:
+      - "{{ volume_destroy.result.status == 204 }}"
+    msg: "{{ volume_destroy }}"

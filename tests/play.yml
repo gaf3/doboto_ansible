@@ -15,8 +15,8 @@
 
   - block:
     - include: library/clear.yml
-    - include: library/ssh_key.yml
-    tags: ssh_key
+    - include: library/volume.yml
+    tags: volume
 
   - block:
     - include: library/clear.yml
@@ -25,13 +25,23 @@
 
   - block:
     - include: library/clear.yml
+    - include: library/droplet_action.yml
+    tags: droplet_action
+
+  - block:
+    - include: library/clear.yml
     - include: library/image.yml
     tags: image
 
   - block:
     - include: library/clear.yml
-    - include: library/droplet_action.yml
-    tags: droplet_action
+    - include: library/snapshot.yml
+    tags: snapshot
+
+  - block:
+    - include: library/clear.yml
+    - include: library/ssh_key.yml
+    tags: ssh_key
 
   - block:
     - include: library/clear.yml

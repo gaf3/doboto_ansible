@@ -10,7 +10,7 @@ from doboto.DO import DO
 """
 
 Ansible module to manage DigitalOcean droplets
-(c) 2017, Gaffer Fitch <gfitch@digitalocean.com>
+(c) 2017, SWE Data <swe-data@do.co>
 
 This file is part of Ansible
 
