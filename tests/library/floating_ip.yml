@@ -97,17 +97,17 @@
       - "{{ floating_ip_unassign.action.resource_type == 'floating_ip' }}"
     msg: "{{ floating_ip_unassign }}"
 
-- name: floating_ip | actions
+- name: floating_ip | action_list
   doboto_floating_ip:
-    action: actions
+    action: action_list
     ip: "{{ floating_ip_create_region.floating_ip.ip }}"
-  register: floating_ip_actions
+  register: floating_ip_action_list
 
-- name: floating_ip | actions | verify
+- name: floating_ip | action | list | verify
   assert:
     that:
-      - "{{ floating_ip_actions|json_query(floating_ip_unassign_query) == floating_ip_unassign.action.id }}"
-    msg: "{{ floating_ip_actions }}"
+      - "{{ floating_ip_action_list|json_query(floating_ip_unassign_query) == floating_ip_unassign.action.id }}"
+    msg: "{{ floating_ip_action_list }}"
   vars:
     floating_ip_unassign_query: "actions[?type=='unassign_ip'].id | [0]"
 

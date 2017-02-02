@@ -43,13 +43,13 @@ options:
     action:
         floating_ip action
         choices:
-            - create
             - list
+            - create
             - info
             - destroy
             - assign
             - unassign
-            - actions
+            - action_list
             - action_info
     ip:
         description:
@@ -105,13 +105,13 @@ class FloatingIP(object):
 
         return AnsibleModule(argument_spec=dict(
             action=dict(default=None, required=True, choices=[
-                "create",
                 "list",
+                "create",
                 "info",
                 "destroy",
                 "assign",
                 "unassign",
-                "actions",
+                "action_list",
                 "action_info"
             ]),
             token=dict(default=None),
@@ -128,6 +128,17 @@ class FloatingIP(object):
     def act(self):
 
         getattr(self, self.module.params["action"])()
+
+    def list(self):
+
+        result = None
+
+        result = self.do.floating_ip.list()
+
+        if "floating_ips" not in result:
+            self.module.fail_json(msg="DO API error", result=result)
+
+        self.module.exit_json(changed=False, floating_ips=result["floating_ips"])
 
     def create(self):
 
@@ -177,17 +188,6 @@ class FloatingIP(object):
 
         else:
             self.module.fail_json(msg="the dropelt_id or region parameter is required")
-
-    def list(self):
-
-        result = None
-
-        result = self.do.floating_ip.list()
-
-        if "floating_ips" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=False, floating_ips=result["floating_ips"])
 
     def info(self):
 
@@ -262,12 +262,12 @@ class FloatingIP(object):
 
         self.action_result(result)
 
-    def actions(self):
+    def action_list(self):
 
         if self.module.params["ip"] is None:
             self.module.fail_json(msg="the id parameter is required")
 
-        result = self.do.floating_ip.actions(self.module.params["ip"])
+        result = self.do.floating_ip.action_list(self.module.params["ip"])
 
         if "actions" not in result:
             self.module.fail_json(msg="DO API error", result=result)

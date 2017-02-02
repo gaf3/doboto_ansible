@@ -43,11 +43,11 @@ options:
     action:
         domain action
         choices:
-            - create
             - list
+            - create
             - info
             - destroy
-            - records
+            - record_list
             - record_create
             - record_info
             - record_update
@@ -112,12 +112,12 @@ class Domain(object):
 
         return AnsibleModule(argument_spec=dict(
             action=dict(default=None, required=True, choices=[
-                "create",
                 "list",
+                "create",
                 "info",
                 "update",
                 "destroy",
-                "records",
+                "record_list",
                 "record_create",
                 "record_info",
                 "record_update",
@@ -192,12 +192,12 @@ class Domain(object):
 
         self.module.exit_json(changed=True, result=result)
 
-    def records(self):
+    def record_list(self):
 
         if self.module.params["name"] is None:
             self.module.fail_json(msg="the name parameter is required")
 
-        result = self.do.domain.records(self.module.params["name"])
+        result = self.do.domain.record_list(self.module.params["name"])
 
         if "domain_records" not in result:
             self.module.fail_json(msg="DO API error", result=result)

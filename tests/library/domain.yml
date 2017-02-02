@@ -35,17 +35,17 @@
       - "{{ domain_info.domain.name == domain_create.domain.name }}"
     msg: "{{ domain_info }}"
 
-- name: domain | records
+- name: domain | record | list
   doboto_domain:
-    action: records
+    action: record_list
     name: domain.create.com
-  register: domain_records
+  register: domain_record_list
 
-- name: domain | records | verify
+- name: domain | record | list | verify
   assert:
     that:
-      - "{{ domain_records|json_query(records_A_query) == '1.2.3.4' }}"
-    msg: "{{ domain_records }}"
+      - "{{ domain_record_list|json_query(records_A_query) == '1.2.3.4' }}"
+    msg: "{{ domain_record_list }}"
   vars:
     records_A_query: "domain_records[?type=='A'].data | [0]"
 

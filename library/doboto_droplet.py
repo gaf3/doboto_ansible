@@ -43,33 +43,33 @@ options:
     action:
         droplet action
         choices:
+            - list
+            - neighbor_list
+            - droplet_neighbor_list
             - create
             - present
             - info
-            - list
-            - kernels
-            - snapshots
-            - backups
-            - actions
             - destroy
-            - neighbors
-            - droplet_neighbors
-            - enable_backups
-            - disable_backups
+            - backup_list
+            - backup_enable
+            - backup_disable
             - reboot
             - shutdown
-            - power_cycle
             - power_on
             - power_off
+            - power_cycle
             - restore
             - password_reset
             - resize
             - rebuild
             - rename
-            - change_kernel
-            - enable_private_networking
-            - enable_ipv6
-            - snapshot
+            - kernel_list
+            - kernel_update
+            - ipv6_enable
+            - private_networking_enable
+            - snapshot_list
+            - snapshot_create
+            - action_list
             - action_info
 
     id:
@@ -175,34 +175,34 @@ class Droplet(object):
 
         return AnsibleModule(argument_spec=dict(
             action=dict(default=None, required=True, choices=[
+                "list",
+                "neighbor_list",
+                "droplet_neighbor_list",
                 "create",
                 "present",
                 "info",
-                "list",
-                "kernels",
-                "snapshots",
-                "backups",
-                "actions",
                 "destroy",
-                "neighbors",
-                "droplet_neighbors",
-                "enable_backups",
+                "backup_list",
+                "backup_enable",
+                "backup_disable",
                 "reboot",
-                "disable_backups",
                 "shutdown",
-                "power_cycle",
                 "power_on",
                 "power_off",
+                "power_cycle",
                 "restore",
                 "password_reset",
                 "resize",
                 "rebuild",
                 "rename",
-                "change_kernel",
-                "enable_private_networking",
-                "enable_ipv6",
-                "snapshot",
-                "action_info"
+                "kernel_list",
+                "kernel_update",
+                "ipv6_enable",
+                "private_networking_enable",
+                "snapshot_list",
+                "snapshot_create",
+                "action_list",
+                "action_info",
             ]),
             token=dict(default=None),
             id=dict(default=None),
@@ -233,21 +233,21 @@ class Droplet(object):
     def act(self):
 
         if self.module.params["action"] in [
-            "kernels",
-            "snapshots",
-            "backups",
-            "actions"
+            "kernel_list",
+            "snapshot_list",
+            "backup_list",
+            "action_list"
         ]:
-            self.list_action()
+            self.list_action(self.module.params["action"].replace('_list', 's'))
         elif self.module.params["action"] in [
-            "enable_backups",
-            "disable_backups",
+            "backup_enable",
+            "backup_disable",
             "shutdown",
             "power_cycle",
             "power_on",
             "power_off",
-            "enable_private_networking",
-            "enable_ipv6"
+            "private_networking_enable",
+            "ipv6_enable"
         ]:
             self.action()
         elif self.module.params["action"] in [
@@ -255,10 +255,50 @@ class Droplet(object):
             "password_reset"
         ]:
             self.action(tagless=True)
-        elif self.module.params["action"] == "neighbors":
+        elif self.module.params["action"] == "neighbor_list":
             self.list_action("droplets")
         else:
             getattr(self, self.module.params["action"])()
+
+    def list(self):
+
+        result = None
+
+        if self.module.params["tag_name"] is None:
+            result = self.do.droplet.list()
+        else:
+            result = self.do.droplet.list(tag_name=self.module.params["tag_name"])
+
+        if "droplets" not in result:
+            self.module.fail_json(msg="DO API error", result=result)
+
+        self.module.exit_json(changed=False, droplets=result["droplets"])
+
+    def droplet_neighbor_list(self):
+
+        result = self.do.droplet.droplet_neighbor_list()
+
+        if "neighbors" not in result:
+            self.module.fail_json(msg="DO API error", result=result)
+
+        self.module.exit_json(changed=True, neighbors=result["neighbors"])
+
+    def list_action(self, key=None):
+
+        if key is None:
+            key = self.module.params["action"]
+
+        result = None
+
+        if self.module.params["id"] is None:
+            self.module.fail_json(msg="the id parameter is required")
+
+        result = getattr(self.do.droplet, self.module.params["action"])(self.module.params["id"])
+
+        if key not in result:
+            self.module.fail_json(msg="DO API error", result=result)
+
+        self.module.exit_json(changed=False, **{key: result[key]})
 
     def ready(self, droplet, existing):
 
@@ -426,46 +466,6 @@ class Droplet(object):
 
         self.module.exit_json(changed=False, droplet=result["droplet"])
 
-    def list(self):
-
-        result = None
-
-        if self.module.params["tag_name"] is None:
-            result = self.do.droplet.list()
-        else:
-            result = self.do.droplet.list(tag_name=self.module.params["tag_name"])
-
-        if "droplets" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=False, droplets=result["droplets"])
-
-    def list_action(self, key=None):
-
-        if key is None:
-            key = self.module.params["action"]
-
-        result = None
-
-        if self.module.params["id"] is None:
-            self.module.fail_json(msg="the id parameter is required")
-
-        result = getattr(self.do.droplet, self.module.params["action"])(self.module.params["id"])
-
-        if key not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=False, **{key: result[key]})
-
-    def droplet_neighbors(self):
-
-        result = self.do.droplet.droplet_neighbors()
-
-        if "neighbors" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=True, neighbors=result["neighbors"])
-
     def destroy(self):
 
         result = None
@@ -621,7 +621,7 @@ class Droplet(object):
 
         self.action_result(result)
 
-    def change_kernel(self):
+    def kernel_update(self):
 
         result = None
 
@@ -631,20 +631,20 @@ class Droplet(object):
         if self.module.params["kernel"] is None:
             self.module.fail_json(msg="the kernel parameter is required")
 
-        result = self.do.droplet.change_kernel(
+        result = self.do.droplet.kernel_update(
             self.module.params["id"], self.module.params["kernel"]
         )
 
         self.action_result(result)
 
-    def snapshot(self):
+    def snapshot_create(self):
 
         if self.module.params["name"] is None:
             self.module.fail_json(msg="the name parameter is required")
 
         if self.module.params["id"] is not None:
 
-            result = self.do.droplet.snapshot(
+            result = self.do.droplet.snapshot_create(
                 id=self.module.params["id"], name=self.module.params["name"]
             )
 
@@ -652,7 +652,7 @@ class Droplet(object):
 
         elif self.module.params["tag_name"] is not None:
 
-            result = self.do.droplet.snapshot(
+            result = self.do.droplet.snapshot_create(
                 tag_name=self.module.params["tag_name"], name=self.module.params["name"]
             )
 

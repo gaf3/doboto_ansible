@@ -43,16 +43,16 @@ options:
     action:
         volume action
         choices:
+            - list
             - create
             - info
-            - list
-            - snapshots
-            - snapshot
             - destroy
+            - snapshot_list
+            - snapshot_create
             - attach
             - detach
             - resize
-            - actions
+            - action_list
             - action_info
     id:
         description:
@@ -156,6 +156,20 @@ class Volume(object):
 
         getattr(self, self.module.params["action"])()
 
+    def list(self):
+
+        result = None
+
+        if self.module.params["region"] is not None:
+            result = self.do.volume.list(region=self.module.params["region"])
+        else:
+            result = self.do.volume.list()
+
+        if "volumes" not in result:
+            self.module.fail_json(msg="DO API error", result=result)
+
+        self.module.exit_json(changed=False, volumes=result["volumes"])
+
     def create(self):
 
         attribs = {}
@@ -203,20 +217,6 @@ class Volume(object):
 
         self.module.exit_json(changed=True, volume=result['volume'])
 
-    def list(self):
-
-        result = None
-
-        if self.module.params["region"] is not None:
-            result = self.do.volume.list(region=self.module.params["region"])
-        else:
-            result = self.do.volume.list()
-
-        if "volumes" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=False, volumes=result["volumes"])
-
     def info(self):
 
         result = None
@@ -244,35 +244,6 @@ class Volume(object):
         else:
             self.module.fail_json(msg="the id or name and region parameters are required")
 
-    def snapshots(self):
-
-        if self.module.params["id"] is None:
-            self.module.fail_json(msg="the id parameter is required")
-
-        result = self.do.volume.snapshots(id=self.module.params["id"])
-
-        if "snapshots" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=False, snapshots=result["snapshots"])
-
-    def snapshot(self):
-
-        if self.module.params["id"] is None:
-            self.module.fail_json(msg="the id parameter is required")
-
-        if self.module.params["snapshot_name"] is None:
-            self.module.fail_json(msg="the snapshot_name parameter is required")
-
-        result = self.do.volume.snapshot(
-            id=self.module.params["id"], snapshot_name=self.module.params["snapshot_name"]
-        )
-
-        if "snapshot" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=True, snapshot=result["snapshot"])
-
     def destroy(self):
 
         result = None
@@ -290,6 +261,35 @@ class Volume(object):
             self.module.fail_json(msg="DO API error", result=result)
 
         self.module.exit_json(changed=True, result=result)
+
+    def snapshot_list(self):
+
+        if self.module.params["id"] is None:
+            self.module.fail_json(msg="the id parameter is required")
+
+        result = self.do.volume.snapshot_list(id=self.module.params["id"])
+
+        if "snapshots" not in result:
+            self.module.fail_json(msg="DO API error", result=result)
+
+        self.module.exit_json(changed=False, snapshots=result["snapshots"])
+
+    def snapshot_create(self):
+
+        if self.module.params["id"] is None:
+            self.module.fail_json(msg="the id parameter is required")
+
+        if self.module.params["snapshot_name"] is None:
+            self.module.fail_json(msg="the snapshot_name parameter is required")
+
+        result = self.do.volume.snapshot_create(
+            id=self.module.params["id"], snapshot_name=self.module.params["snapshot_name"]
+        )
+
+        if "snapshot" not in result:
+            self.module.fail_json(msg="DO API error", result=result)
+
+        self.module.exit_json(changed=True, snapshot=result["snapshot"])
 
     def action_result(self, result):
 
@@ -391,12 +391,12 @@ class Volume(object):
 
         self.action_result(result)
 
-    def actions(self):
+    def action_list(self):
 
         if self.module.params["id"] is None:
             self.module.fail_json(msg="the id parameter is required")
 
-        result = self.do.volume.actions(self.module.params["id"])
+        result = self.do.volume.action_list(self.module.params["id"])
 
         if "actions" not in result:
             self.module.fail_json(msg="DO API error", result=result)

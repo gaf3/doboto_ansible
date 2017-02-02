@@ -43,14 +43,14 @@ options:
     action:
         tag action
         choices:
+            - list
             - create
             - present
             - info
-            - list
             - update
+            - destroy
             - attach
             - detach
-            - destroy
     name:
         description:
             - same as DO API variable
@@ -102,14 +102,14 @@ class Tag(object):
 
         return AnsibleModule(argument_spec=dict(
             action=dict(default=None, required=True, choices=[
+                "list",
                 "create",
                 "present",
                 "info",
-                "list",
                 "update",
+                "destroy",
                 "attach",
                 "detach",
-                "destroy"
             ]),
             token=dict(default=None),
             name=dict(default=None),
@@ -124,6 +124,15 @@ class Tag(object):
     def act(self):
 
         getattr(self, self.module.params["action"])()
+
+    def list(self):
+
+        result = self.do.tag.list()
+
+        if "tags" not in result:
+            self.module.fail_json(msg="DO API error", result=result)
+
+        self.module.exit_json(changed=False, tags=result["tags"])
 
     def create(self):
 
@@ -173,15 +182,6 @@ class Tag(object):
             self.module.fail_json(msg="DO API error", result=result)
 
         self.module.exit_json(changed=False, tag=result['tag'])
-
-    def list(self):
-
-        result = self.do.tag.list()
-
-        if "tags" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=False, tags=result["tags"])
 
     def names(self):
 

@@ -41,9 +41,9 @@ options:
     action:
         ssh key action
         choices:
+            - list
             - create
             - present
-            - list
             - info
             - update
             - destroy
@@ -106,6 +106,15 @@ class SSHKey(object):
 
         getattr(self, self.module.params["action"])()
 
+    def list(self):
+
+        result = self.do.ssh_key.list()
+
+        if "ssh_keys" not in result:
+            self.module.fail_json(msg="DO API error", result=result)
+
+        self.module.exit_json(changed=False, ssh_keys=result["ssh_keys"])
+
     def create(self):
 
         if self.module.params["name"] is None:
@@ -145,15 +154,6 @@ class SSHKey(object):
             self.module.exit_json(changed=False, ssh_key=existing)
         else:
             self.create()
-
-    def list(self):
-
-        result = self.do.ssh_key.list()
-
-        if "ssh_keys" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=False, ssh_keys=result["ssh_keys"])
 
     def info(self):
 
