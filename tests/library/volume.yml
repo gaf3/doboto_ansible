@@ -54,30 +54,30 @@
       - "{{ volume_info_name_region.volume.id == volume_create.volume.id }}"
     msg: "{{ volume_info_name_region }}"
 
-- name: volume | snapshot
+- name: volume | snapshot | create
   doboto_volume:
-    action: snapshot
+    action: snapshot_create
     id: "{{ volume_create.volume.id }}"
     snapshot_name: bulletproof
-  register: volume_snapshot
+  register: volume_snapshot_create
 
-- name: volume | snapshot | verify
+- name: volume | snapshot | create | verify
   assert:
     that:
-      - "{{ volume_snapshot.snapshot.name == 'bulletproof' }}"
-    msg: "{{ volume_snapshot }}"
+      - "{{ volume_snapshot_create.snapshot.name == 'bulletproof' }}"
+    msg: "{{ volume_snapshot_create }}"
 
-- name: volume | snapshots
+- name: volume | snapshot | list
   doboto_volume:
-    action: snapshots
+    action: snapshot_list
     id: "{{ volume_create.volume.id }}"
-  register: volume_snapshots
+  register: volume_snapshot_list
 
-- name: volume | snapshots | verify
+- name: volume | snapshot | list | verify
   assert:
     that:
-      - "{{ volume_snapshots.snapshots[0] == volume_snapshot.snapshot }}"
-    msg: "{{ volume_snapshots }}"
+      - "{{ volume_snapshot_list.snapshots[0] == volume_snapshot_create.snapshot }}"
+    msg: "{{ volume_snapshot_list }}"
 
 - name: volume | droplet | create
   doboto_droplet:
@@ -93,7 +93,7 @@
   doboto_volume:
     action: create
     name: volume-create-snapshot
-    snapshot_id: "{{ volume_snapshot.snapshot.id }}"
+    snapshot_id: "{{ volume_snapshot_create.snapshot.id }}"
     size_gigabytes: 2
     description: "A bad one"
     wait: true
@@ -190,26 +190,26 @@
       - "{{ volume_resize.action.status == 'completed' }}"
     msg: "{{ volume_resize }}"
 
-- name: volume | actions
+- name: volume | action | list
   doboto_volume:
-    action: actions
+    action: action_list
     id: "{{ volume_create.volume.id }}"
-  register: volume_actions
+  register: volume_action_list
 
-- name: volume | actions | verify
+- name: volume | action | list | verify
   assert:
     that:
-      - "{{ volume_actions|length > 0 }}"
-    msg: "{{ volume_actions }}"
+      - "{{ volume_action_list|length > 0 }}"
+    msg: "{{ volume_action_list }}"
 
-- name: volume | action_info
+- name: volume | action | info
   doboto_volume:
     action: action_info
     id: "{{ volume_create.volume.id }}"
     action_id: "{{ volume_attach_id.action.id }}"
   register: volume_action_info
 
-- name: volume | action_info | verify
+- name: volume | action | info | verify
   assert:
     that:
       - "{{ volume_action_info.action.type == 'attach_volume' }}"

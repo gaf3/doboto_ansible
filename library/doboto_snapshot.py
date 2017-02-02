@@ -43,8 +43,8 @@ options:
     action:
         snapshot action
         choices:
-            - info
             - list
+            - info
             - destroy
     id:
         description:

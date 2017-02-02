@@ -32,13 +32,13 @@
     wait: true
   register: image_droplet
 
-- name: image | droplet | snapshot
+- name: image | droplet | snapshot | create
   doboto_droplet:
-    action: snapshot
+    action: snapshot_create
     id: "{{ image_droplet.droplet.id }}"
     name: "how-bow-dah"
     wait: true
-  register: image_snapshot
+  register: image_snapshot_create
 
 - name: image | list
   doboto_image:
@@ -91,20 +91,20 @@
 
 - name: image | snapshot | fact
   set_fact:
-    image_snapshot: "{{image_list_user|json_query(image_snapshot_query)}}"
+    image_snapshot_create: "{{image_list_user|json_query(image_snapshot_create_query)}}"
   vars:
-    image_snapshot_query: "images[?type=='snapshot'] | [0]"
+    image_snapshot_create_query: "images[?type=='snapshot'] | [0]"
 
 - name: image | snapshot | fact | verify
   assert:
     that:
-      - "{{ image_snapshot.name == 'how-bow-dah' }}"
-    msg: "{{ image_snapshot }}"
+      - "{{ image_snapshot_create.name == 'how-bow-dah' }}"
+    msg: "{{ image_snapshot_create }}"
 
 - name: image | update
   doboto_image:
     action: update
-    id: "{{ image_snapshot.id }}"
+    id: "{{ image_snapshot_create.id }}"
     name: "cash-me-ousside"
   register: image_update
 
@@ -117,7 +117,7 @@
 - name: image | transfer
   doboto_image:
     action: transfer
-    id: "{{ image_snapshot.id }}"
+    id: "{{ image_snapshot_create.id }}"
     region: nyc2
   register: image_transfer
 
@@ -126,44 +126,44 @@
     that:
       - "{{ image_transfer.action.type == 'transfer' }}"
       - "{{ image_transfer.action.resource_type == 'image' }}"
-      - "{{ image_transfer.action.resource_id == image_snapshot.id }}"
+      - "{{ image_transfer.action.resource_id == image_snapshot_create.id }}"
       - "{{ image_transfer.action.status == 'in-progress' }}"
     msg: "{{ image_transfer }}"
 
-- name: image | actions
+- name: image | action | list
   doboto_image:
-    action: actions
-    id: "{{ image_snapshot.id }}"
-  register: image_actions
+    action: action_list
+    id: "{{ image_snapshot_create.id }}"
+  register: image_action_list
 
-- name: image | actions | verify
+- name: image | action | list | verify
   assert:
     that:
-      - "{{ image_actions|json_query(image_transfer_query) == image_transfer.action.id }}"
-    msg: "{{ image_actions }}"
+      - "{{ image_action_list|json_query(image_transfer_query) == image_transfer.action.id }}"
+    msg: "{{ image_action_list }}"
   vars:
     image_transfer_query: "actions[?type=='transfer'].id | [0]"
 
-- name: image | action_info
+- name: image | action | info
   doboto_image:
     action: action_info
-    id: "{{ image_snapshot.id }}"
+    id: "{{ image_snapshot_create.id }}"
     action_id: "{{ image_transfer.action.id }}"
   register: image_action_info
 
-- name: image | action_info | verify
+- name: image | action | info | verify
   assert:
     that:
       - "{{ image_action_info.action.type == 'transfer' }}"
       - "{{ image_action_info.action.resource_type == 'image' }}"
-      - "{{ image_action_info.action.resource_id == image_snapshot.id }}"
+      - "{{ image_action_info.action.resource_id == image_snapshot_create.id }}"
       - "{{ image_action_info.action.status == 'in-progress' }}"
     msg: "{{ image_action_info }}"
 
 - name: image | destroy
   doboto_image:
     action: destroy
-    id: "{{ image_snapshot.id }}"
+    id: "{{ image_snapshot_create.id }}"
   register: image_destroy
 
 - name: image | destroy | verify

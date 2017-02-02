@@ -43,13 +43,13 @@ options:
     action:
         image action
         choices:
-            - info
             - list
+            - info
             - update
             - destroy
-            - actions
             - convert
             - transfer
+            - action_list
             - action_info
     id:
         description:
@@ -115,13 +115,13 @@ class Image(object):
 
         return AnsibleModule(argument_spec=dict(
             action=dict(default=None, required=True, choices=[
-                "info",
                 "list",
+                "info",
                 "update",
                 "destroy",
-                "actions",
                 "convert",
                 "transfer",
+                "action_list",
                 "action_info"
             ]),
             token=dict(default=None),
@@ -142,22 +142,6 @@ class Image(object):
 
         getattr(self, self.module.params["action"])()
 
-    def info(self):
-
-        result = None
-
-        if self.module.params["id"] is not None:
-            result = self.do.image.info(self.module.params["id"])
-        elif self.module.params["slug"] is not None:
-            result = self.do.image.info(self.module.params["slug"])
-        else:
-            self.module.fail_json(msg="the id or slug parameter is required")
-
-        if "image" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=False, image=result["image"])
-
     def list(self):
 
         result = None
@@ -173,6 +157,22 @@ class Image(object):
             self.module.fail_json(msg="DO API error", result=result)
 
         self.module.exit_json(changed=False, images=result["images"])
+
+    def info(self):
+
+        result = None
+
+        if self.module.params["id"] is not None:
+            result = self.do.image.info(self.module.params["id"])
+        elif self.module.params["slug"] is not None:
+            result = self.do.image.info(self.module.params["slug"])
+        else:
+            self.module.fail_json(msg="the id or slug parameter is required")
+
+        if "image" not in result:
+            self.module.fail_json(msg="DO API error", result=result)
+
+        self.module.exit_json(changed=False, image=result["image"])
 
     def update(self):
 
@@ -200,18 +200,6 @@ class Image(object):
             self.module.fail_json(msg="DO API error", result=result)
 
         self.module.exit_json(changed=True, result=result)
-
-    def actions(self):
-
-        if self.module.params["id"] is None:
-            self.module.fail_json(msg="the id parameter is required")
-
-        result = self.do.image.actions(self.module.params["id"])
-
-        if "actions" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=False, actions=result["actions"])
 
     def action_result(self, result):
 
@@ -255,6 +243,18 @@ class Image(object):
 
         result = self.do.image.transfer(self.module.params["id"], self.module.params["region"])
         self.action_result(result)
+
+    def action_list(self):
+
+        if self.module.params["id"] is None:
+            self.module.fail_json(msg="the id parameter is required")
+
+        result = self.do.image.action_list(self.module.params["id"])
+
+        if "actions" not in result:
+            self.module.fail_json(msg="DO API error", result=result)
+
+        self.module.exit_json(changed=False, actions=result["actions"])
 
     def action_info(self):
 

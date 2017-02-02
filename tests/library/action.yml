@@ -9,9 +9,9 @@
 
 - name: action | droplet | create | action
   doboto_droplet:
-    action: actions
+    action: action_list
     id: "{{action_droplet.droplet.id}}"
-  register: action_droplet_actions
+  register: action_droplet_action_list
 
 - name: action | list
   doboto_action:
@@ -28,12 +28,12 @@
 - name: action | info
   doboto_action:
     action: info
-    id: "{{ action_droplet_actions.actions[0].id }}"
+    id: "{{ action_droplet_action_list.actions[0].id }}"
   register: action_info
 
 - name: action | info | verify
   assert:
     that:
       - "{{ action_info.action.resource_type == 'droplet' }}"
-      - "{{ action_info.action.resource_id == action_droplet_actions.actions[0].resource_id }}"
+      - "{{ action_info.action.resource_id == action_droplet_action_list.actions[0].resource_id }}"
     msg: "{{ action_info }}"

@@ -238,53 +238,53 @@
     droplet_create_05_query: "droplets[?name=='droplet-create-05'].id | [0]"
     droplet_create_06_query: "droplets[?name=='droplet-create-06'].id | [0]"
 
-- name: droplet | kernels
+- name: droplet | kernel | list
   doboto_droplet:
-    action: kernels
+    action: kernel_list
     id: "{{ droplet_create.droplet.id }}"
-  register: droplet_kernels
+  register: droplet_kernel_list
 
-- name: droplet | kernels | verify
+- name: droplet | kernel | list | verify
   assert:
     that:
-      - "{{ droplet_kernels.kernels|length > 0 }}"
-    msg: "{{ droplet_kernels }}"
+      - "{{ droplet_kernel_list.kernels|length > 0 }}"
+    msg: "{{ droplet_kernel_list }}"
 
-- name: droplet | snapshots
+- name: droplet | snapshot | list
   doboto_droplet:
-    action: snapshots
+    action: snapshot_list
     id: "{{ droplet_create.droplet.id }}"
-  register: droplet_snapshots
+  register: droplet_snapshot_list
 
-- name: droplet | snapshots | verify
+- name: droplet | snapshot | list | verify
   assert:
     that:
-      - "{{ droplet_snapshots.snapshots|length > -1 }}"
-    msg: "{{ droplet_snapshots }}"
+      - "{{ droplet_snapshot_list.snapshots|length > -1 }}"
+    msg: "{{ droplet_snapshot_list }}"
 
-- name: droplet | backups
+- name: droplet | backup | list
   doboto_droplet:
-    action: backups
+    action: backup_list
     id: "{{ droplet_create.droplet.id }}"
-  register: droplet_backups
+  register: droplet_backup_list
 
 - name: droplet | backups | verify
   assert:
     that:
-      - "{{ droplet_backups.backups|length > -1 }}"
-    msg: "{{ droplet_backups }}"
+      - "{{ droplet_backup_list.backups|length > -1 }}"
+    msg: "{{ droplet_backup_list }}"
 
-- name: droplet | actions
+- name: droplet | action | list
   doboto_droplet:
-    action: actions
+    action: action_list
     id: "{{ droplet_create.droplet.id }}"
-  register: droplet_actions
+  register: droplet_action_list
 
-- name: droplet | actions | verify
+- name: droplet | action | list | verify
   assert:
     that:
-      - "{{ droplet_actions.actions|length > 0 }}"
-    msg: "{{ droplet_actions }}"
+      - "{{ droplet_action_list.actions|length > 0 }}"
+    msg: "{{ droplet_action_list }}"
 
 - name: droplet | destroy | by id
   doboto_droplet:
@@ -310,25 +310,25 @@
       - "{{ droplet_tag_destroy.result.status == 204 }}"
     msg: "{{ droplet_tag_destroy }}"
 
-- name: droplet | neighbors
+- name: droplet | neighbor | list
   doboto_droplet:
-    action: neighbors
+    action: neighbor_list
     id: "{{ droplet_create.droplet.id }}"
-  register: droplet_neighbors
+  register: droplet_neighbor_list
 
 - name: droplet | neighbors | verify
   assert:
     that:
-      - "{{ droplet_neighbors.droplets|length > -1 }}"
-    msg: "{{ droplet_neighbors }}"
+      - "{{ droplet_neighbor_list.droplets|length > -1 }}"
+    msg: "{{ droplet_neighbor_list }}"
 
-- name: droplet | droplet_neighbors
+- name: droplet | droplet_neighbor_list
   doboto_droplet:
-    action: droplet_neighbors
-  register: droplet_droplet_neighbors
+    action: droplet_neighbor_list
+  register: droplet_droplet_neighbor_list
 
-- name: droplet | droplet_neighbors | verify
+- name: droplet | droplet_neighbor_list | verify
   assert:
     that:
-      - "{{ droplet_droplet_neighbors.neighbors|length > -1 }}"
-    msg: "{{ droplet_droplet_neighbors }}"
+      - "{{ droplet_droplet_neighbor_list.neighbors|length > -1 }}"
+    msg: "{{ droplet_droplet_neighbor_list }}"

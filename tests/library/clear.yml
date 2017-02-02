@@ -8,89 +8,89 @@
       - "{{ account_info.account.uuid == 'b60c5d2212bf79e1a2bb0e3c1b2ae30a617fb796' }}"
     msg: "{{ account_info }}"
 
-- name: clear | domains | list
+- name: clear | domain | list
   doboto_domain:
     action: list
-  register: clear_domains
+  register: clear_domain_list
 
-- name: clear | domains | destroy
+- name: clear | domain | destroy
   doboto_domain:
     action: destroy
     name: "{{ item.name }}"
-  with_items: "{{ clear_domains.domains }}"
+  with_items: "{{ clear_domain_list.domains }}"
   ignore_errors: yes
 
-- name: clear | droplets | list
+- name: clear | droplet | list
   doboto_droplet:
     action: list
-  register: clear_droplets
+  register: clear_droplet_list
 
-- name: clear | droplets | destroy
+- name: clear | droplet | destroy
   doboto_droplet:
     action: destroy
     id: "{{ item.id }}"
-  with_items: "{{ clear_droplets.droplets }}"
+  with_items: "{{ clear_droplet_list.droplets }}"
   ignore_errors: yes
 
-- name: clear | snapshots | list
+- name: clear | snapshot | list
   doboto_snapshot:
     action: list
-  register: clear_snapshots
+  register: clear_snapshot_list
 
-- name: clear | snapshots | destroy
+- name: clear | snapshot | destroy
   doboto_snapshot:
     action: destroy
     id: "{{ item.id }}"
-  with_items: "{{ clear_snapshots.snapshots }}"
+  with_items: "{{ clear_snapshot_list.snapshots }}"
   ignore_errors: yes
 
-- name: clear | volumes | list
+- name: clear | volume | list
   doboto_volume:
     action: list
-  register: clear_volumes
+  register: clear_volume_list
 
-- name: clear | volumes | destroy
+- name: clear | volume | destroy
   doboto_volume:
     action: destroy
     id: "{{ item.id }}"
-  with_items: "{{ clear_volumes.volumes }}"
+  with_items: "{{ clear_volume_list.volumes }}"
   ignore_errors: yes
 
-- name: clear | images | list
+- name: clear | image | list
   doboto_image:
     action: list
     private: true
-  register: clear_images
+  register: clear_image_list
 
-- name: clear | images | convert
+- name: clear | image | convert
   doboto_image:
     action: convert
     id: "{{ item.id }}"
     wait: true
-  with_items: "{{ clear_images|json_query(image_backup_query) }}"
+  with_items: "{{ clear_image_list|json_query(image_backup_query) }}"
   vars:
     image_backup_query: "images[?type=='backup']"
   ignore_errors: yes
 
-- name: clear | images | destroy
+- name: clear | image | destroy
   doboto_image:
     action: destroy
     id: "{{ item.id }}"
-  with_items: "{{ clear_images.images }}"
+  with_items: "{{ clear_image_list.images }}"
   ignore_errors: yes
 
-- name: clear | ssh keys | list
+- name: clear | ssh key | list
   doboto_ssh_key:
     action: list
-  register: clear_ssh_keys
+  register: clear_ssh_key_list
 
-- name: clear | ssh keys | destory
+- name: clear | ssh key | destory
   doboto_ssh_key:
     action: destroy
     id: "{{ item.id }}"
-  with_items: "{{ clear_ssh_keys.ssh_keys }}"
+  with_items: "{{ clear_ssh_key_list.ssh_keys }}"
 
-- name: clear | ssh keys | files
+- name: clear | ssh key | file
   file:
     path: "{{ item }}"
     state: absent
@@ -100,24 +100,24 @@
     - /tmp/id_doboto_present
     - /tmp/id_doboto_present.pub
 
-- name: clear | floating ips | list
+- name: clear | floating ip | list
   doboto_floating_ip:
     action: list
-  register: clear_floating_ips
+  register: clear_floating_ip_list
 
-- name: clear | floating ips | destory
+- name: clear | floating ip | destory
   doboto_floating_ip:
     action: destroy
     ip: "{{ item.ip }}"
-  with_items: "{{ clear_floating_ips.floating_ips }}"
+  with_items: "{{ clear_floating_ip_list.floating_ips }}"
 
-- name: clear | tags | list
+- name: clear | tag | list
   doboto_tag:
     action: list
-  register: clear_tags
+  register: clear_tag_list
 
-- name: clear | tags | destroy
+- name: clear | tag | destroy
   doboto_tag:
     action: destroy
     name: "{{ item.name }}"
-  with_items: "{{ clear_tags.tags }}"
+  with_items: "{{ clear_tag_list.tags }}"
