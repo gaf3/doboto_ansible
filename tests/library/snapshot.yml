@@ -8,13 +8,13 @@
     wait: true
   register: snapshot_droplet
 
-- name: snapshot | droplet | snapshot
+- name: snapshot | droplet | snapshot | create
   doboto_droplet:
-    action: snapshot
+    action: snapshot_create
     id: "{{ snapshot_droplet.droplet.id }}"
     name: "how-bow-dah"
     wait: true
-  register: snapshot_droplet_snapshot
+  register: snapshot_droplet_snapshot_create
 
 - name: snapshot | volume | create
   doboto_volume:
@@ -27,10 +27,10 @@
 
 - name: snapshot | volume | snapshot
   doboto_volume:
-    action: snapshot
+    action: snapshot_create
     id: "{{ snapshot_volume.volume.id }}"
     snapshot_name: "cash-me-ousside"
-  register: volume_snapshot
+  register: snapshot_volume_snapshot_create
 
 - name: snapshot | list
   doboto_snapshot:

@@ -18,7 +18,7 @@
 - name: droplet_action | single | backup_enable | verify
   assert:
     that:
-      - "{{ single_backup_enable.action.type == 'backup_enable' }}"
+      - "{{ single_backup_enable.action.type == 'enable_backups' }}"
       - "{{ single_backup_enable.action.resource_type == 'droplet' }}"
       - "{{ single_backup_enable.action.resource_id == droplet_action.droplet.id }}"
       - "{{ single_backup_enable.action.status != 'in-progress' }}"
@@ -34,7 +34,7 @@
 - name: droplet_action | single | backup_disable | verify
   assert:
     that:
-      - "{{ single_backup_disable.action.type == 'backup_disable' }}"
+      - "{{ single_backup_disable.action.type == 'disable_backups' }}"
       - "{{ single_backup_disable.action.resource_type == 'droplet' }}"
       - "{{ single_backup_disable.action.resource_id == droplet_action.droplet.id }}"
       - "{{ single_backup_disable.action.status != 'in-progress' }}"
@@ -98,7 +98,7 @@
 - name: droplet_action | single | private_networking_enable | verify
   assert:
     that:
-      - "{{ single_private_networking_enable.action.type == 'private_networking_enable' }}"
+      - "{{ single_private_networking_enable.action.type == 'enable_private_networking' }}"
       - "{{ single_private_networking_enable.action.resource_type == 'droplet' }}"
       - "{{ single_private_networking_enable.action.resource_id == droplet_action.droplet.id }}"
       - "{{ single_private_networking_enable.action.status != 'in-progress' }}"
@@ -114,7 +114,7 @@
 - name: droplet_action | single | ipv6_enable | verify
   assert:
     that:
-      - "{{ single_ipv6_enable.action.type == 'ipv6_enable' }}"
+      - "{{ single_ipv6_enable.action.type == 'enable_ipv6' }}"
       - "{{ single_ipv6_enable.action.resource_type == 'droplet' }}"
       - "{{ single_ipv6_enable.action.resource_id == droplet_action.droplet.id }}"
       - "{{ single_ipv6_enable.action.status != 'in-progress' }}"
@@ -221,7 +221,7 @@
       - "{{ single_rename.action.status != 'in-progress' }}"
     msg: "{{ single_rename }}"
 
-- name: droplet_action | single | kernel_update
+- name: droplet_action | single | kernel | update
   doboto_droplet:
     action: kernel_update
     id: "{{ droplet_action.droplet.id }}"
@@ -229,16 +229,16 @@
     wait: true
   register: single_kernel_update
 
-- name: droplet_action | single | kernel_update | verify
+- name: droplet_action | single | kernel | update | verify
   assert:
     that:
-      - "{{ single_kernel_update.action.type == 'kernel_update' }}"
+      - "{{ single_kernel_update.action.type == 'change_kernel' }}"
       - "{{ single_kernel_update.action.resource_type == 'droplet' }}"
       - "{{ single_kernel_update.action.resource_id == droplet_action.droplet.id }}"
       - "{{ single_kernel_update.action.status != 'in-progress' }}"
     msg: "{{ single_kernel_update }}"
 
-- name: droplet_action | single | snapshot_create
+- name: droplet_action | single | snapshot | create
   doboto_droplet:
     action: snapshot_create
     id: "{{ droplet_action.droplet.id }}"
@@ -246,7 +246,7 @@
     wait: true
   register: single_snapshot_create
 
-- name: droplet_action | single | snapshot_create | verify
+- name: droplet_action | single | snapshot | create | verify
   assert:
     that:
       - "{{ single_snapshot_create.action.type == 'snapshot' }}"
@@ -255,7 +255,7 @@
       - "{{ single_snapshot_create.action.status != 'in-progress' }}"
     msg: "{{ single_snapshot_create }}"
 
-- name: droplet_action | single | snapshot_list
+- name: droplet_action | single | snapshot | list
   doboto_droplet:
     action: snapshot_list
     id: "{{ droplet_action.droplet.id }}"
@@ -317,10 +317,10 @@
 - name: droplet_action | multiple | backup_enable | verify
   assert:
     that:
-      - "{{ multiple_backup_enable.actions[0].type == 'backup_enable' }}"
+      - "{{ multiple_backup_enable.actions[0].type == 'enable_backups' }}"
       - "{{ multiple_backup_enable.actions[0].resource_type == 'droplet' }}"
       - "{{ multiple_backup_enable.actions[0].status != 'in-progress' }}"
-      - "{{ multiple_backup_enable.actions[1].type == 'backup_enable' }}"
+      - "{{ multiple_backup_enable.actions[1].type == 'enable_backups' }}"
       - "{{ multiple_backup_enable.actions[1].resource_type == 'droplet' }}"
       - "{{ multiple_backup_enable.actions[1].status != 'in-progress' }}"
     msg: "{{ multiple_backup_enable }}"
@@ -335,10 +335,10 @@
 - name: droplet_action | multiple | backup_disable | verify
   assert:
     that:
-      - "{{ multiple_backup_disable.actions[0].type == 'backup_disable' }}"
+      - "{{ multiple_backup_disable.actions[0].type == 'disable_backups' }}"
       - "{{ multiple_backup_disable.actions[0].resource_type == 'droplet' }}"
       - "{{ multiple_backup_disable.actions[0].status != 'in-progress' }}"
-      - "{{ multiple_backup_disable.actions[1].type == 'backup_disable' }}"
+      - "{{ multiple_backup_disable.actions[1].type == 'disable_backups' }}"
       - "{{ multiple_backup_disable.actions[1].resource_type == 'droplet' }}"
       - "{{ multiple_backup_disable.actions[1].status != 'in-progress' }}"
     msg: "{{ multiple_backup_disable }}"
@@ -389,10 +389,10 @@
 - name: droplet_action | multiple | private_networking_enable | verify
   assert:
     that:
-      - "{{ multiple_private_networking_enable.actions[0].type == 'private_networking_enable' }}"
+      - "{{ multiple_private_networking_enable.actions[0].type == 'enable_private_networking' }}"
       - "{{ multiple_private_networking_enable.actions[0].resource_type == 'droplet' }}"
       - "{{ multiple_private_networking_enable.actions[0].status != 'in-progress' }}"
-      - "{{ multiple_private_networking_enable.actions[1].type == 'private_networking_enable' }}"
+      - "{{ multiple_private_networking_enable.actions[1].type == 'enable_private_networking' }}"
       - "{{ multiple_private_networking_enable.actions[1].resource_type == 'droplet' }}"
       - "{{ multiple_private_networking_enable.actions[1].status != 'in-progress' }}"
     msg: "{{ multiple_private_networking_enable }}"
@@ -407,10 +407,10 @@
 - name: droplet_action | multiple | ipv6_enable | verify
   assert:
     that:
-      - "{{ multiple_ipv6_enable.actions[0].type == 'ipv6_enable' }}"
+      - "{{ multiple_ipv6_enable.actions[0].type == 'enable_ipv6' }}"
       - "{{ multiple_ipv6_enable.actions[0].resource_type == 'droplet' }}"
       - "{{ multiple_ipv6_enable.actions[0].status != 'in-progress' }}"
-      - "{{ multiple_ipv6_enable.actions[1].type == 'ipv6_enable' }}"
+      - "{{ multiple_ipv6_enable.actions[1].type == 'enable_ipv6' }}"
       - "{{ multiple_ipv6_enable.actions[1].resource_type == 'droplet' }}"
       - "{{ multiple_ipv6_enable.actions[1].status != 'in-progress' }}"
     msg: "{{ multiple_ipv6_enable }}"
@@ -452,18 +452,18 @@
     msg: "{{ multiple_power_cycle }}"
 
 
-- name: droplet_action | multiple | snapshot
+- name: droplet_action | multiple | snapshot | create
   doboto_droplet:
-    action: snapshot
+    action: snapshot_create
     tag_name: some
     name: cash-me-ousside
     wait: true
-  register: multiple_snapshot
+  register: multiple_snapshot_create
 
 - name: droplet_action | multiple | snapshot | verify
   assert:
     that:
-      - "{{ multiple_snapshot.action.type == 'snapshot' }}"
-      - "{{ multiple_snapshot.action.resource_type == 'droplet' }}"
-      - "{{ multiple_snapshot.action.status != 'in-progress' }}"
-    msg: "{{ multiple_snapshot }}"
+      - "{{ multiple_snapshot_create.action.type == 'snapshot' }}"
+      - "{{ multiple_snapshot_create.action.resource_type == 'droplet' }}"
+      - "{{ multiple_snapshot_create.action.status != 'in-progress' }}"
+    msg: "{{ multiple_snapshot_create }}"

@@ -124,16 +124,16 @@ class Volume(object):
 
         return AnsibleModule(argument_spec=dict(
             action=dict(default=None, required=True, choices=[
+                "list",
                 "create",
                 "info",
-                "list",
-                "snapshots",
-                "snapshot",
                 "destroy",
+                "snapshot_list",
+                "snapshot_create",
                 "attach",
                 "detach",
                 "resize",
-                "actions",
+                "action_list",
                 "action_info"
             ]),
             token=dict(default=None),
