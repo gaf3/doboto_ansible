@@ -18,6 +18,7 @@
 - name: droplet_action | single | backup_enable | verify
   assert:
     that:
+      - "{{ single_backup_enable.changed }}"
       - "{{ single_backup_enable.action.type == 'enable_backups' }}"
       - "{{ single_backup_enable.action.resource_type == 'droplet' }}"
       - "{{ single_backup_enable.action.resource_id == droplet_action.droplet.id }}"
@@ -34,6 +35,7 @@
 - name: droplet_action | single | backup_disable | verify
   assert:
     that:
+      - "{{ single_backup_disable.changed }}"
       - "{{ single_backup_disable.action.type == 'disable_backups' }}"
       - "{{ single_backup_disable.action.resource_type == 'droplet' }}"
       - "{{ single_backup_disable.action.resource_id == droplet_action.droplet.id }}"
@@ -50,6 +52,7 @@
 - name: droplet_action | single | reboot | verify
   assert:
     that:
+      - "{{ single_reboot.changed }}"
       - "{{ single_reboot.action.type == 'reboot' }}"
       - "{{ single_reboot.action.resource_type == 'droplet' }}"
       - "{{ single_reboot.action.resource_id == droplet_action.droplet.id }}"
@@ -66,6 +69,7 @@
 - name: droplet_action | single | shutdown | verify
   assert:
     that:
+      - "{{ single_shutdown.changed }}"
       - "{{ single_shutdown.action.type == 'shutdown' }}"
       - "{{ single_shutdown.action.resource_type == 'droplet' }}"
       - "{{ single_shutdown.action.resource_id == droplet_action.droplet.id }}"
@@ -82,6 +86,7 @@
 - name: droplet_action | single | power_off | verify
   assert:
     that:
+      - "{{ single_power_off.changed }}"
       - "{{ single_power_off.action.type == 'power_off' }}"
       - "{{ single_power_off.action.resource_type == 'droplet' }}"
       - "{{ single_power_off.action.resource_id == droplet_action.droplet.id }}"
@@ -98,6 +103,7 @@
 - name: droplet_action | single | private_networking_enable | verify
   assert:
     that:
+      - "{{ single_private_networking_enable.changed }}"
       - "{{ single_private_networking_enable.action.type == 'enable_private_networking' }}"
       - "{{ single_private_networking_enable.action.resource_type == 'droplet' }}"
       - "{{ single_private_networking_enable.action.resource_id == droplet_action.droplet.id }}"
@@ -114,6 +120,7 @@
 - name: droplet_action | single | ipv6_enable | verify
   assert:
     that:
+      - "{{ single_ipv6_enable.changed }}"
       - "{{ single_ipv6_enable.action.type == 'enable_ipv6' }}"
       - "{{ single_ipv6_enable.action.resource_type == 'droplet' }}"
       - "{{ single_ipv6_enable.action.resource_id == droplet_action.droplet.id }}"
@@ -130,6 +137,7 @@
 - name: droplet_action | single | power_on | verify
   assert:
     that:
+      - "{{ single_power_on.changed }}"
       - "{{ single_power_on.action.type == 'power_on' }}"
       - "{{ single_power_on.action.resource_type == 'droplet' }}"
       - "{{ single_power_on.action.resource_id == droplet_action.droplet.id }}"
@@ -146,6 +154,7 @@
 - name: droplet_action | single | power_cycle | verify
   assert:
     that:
+      - "{{ single_power_cycle.changed }}"
       - "{{ single_power_cycle.action.type == 'power_cycle' }}"
       - "{{ single_power_cycle.action.resource_type == 'droplet' }}"
       - "{{ single_power_cycle.action.resource_id == droplet_action.droplet.id }}"
@@ -163,6 +172,7 @@
 - name: droplet_action | single | password_reset | verify
   assert:
     that:
+      - "{{ single_password_reset.changed }}"
       - "{{ single_password_reset.action.type == 'password_reset' }}"
       - "{{ single_password_reset.action.resource_type == 'droplet' }}"
       - "{{ single_password_reset.action.resource_id == droplet_action.droplet.id }}"
@@ -181,6 +191,7 @@
 - name: droplet_action | single | resize | verify
   assert:
     that:
+      - "{{ single_resize.changed }}"
       - "{{ single_resize.action.type == 'resize' }}"
       - "{{ single_resize.action.resource_type == 'droplet' }}"
       - "{{ single_resize.action.resource_id == droplet_action.droplet.id }}"
@@ -198,6 +209,7 @@
 - name: droplet_action | single | rebuild | verify
   assert:
     that:
+      - "{{ single_rebuild.changed }}"
       - "{{ single_rebuild.action.type == 'rebuild' }}"
       - "{{ single_rebuild.action.resource_type == 'droplet' }}"
       - "{{ single_rebuild.action.resource_id == droplet_action.droplet.id }}"
@@ -215,6 +227,7 @@
 - name: droplet_action | single | rename | verify
   assert:
     that:
+      - "{{ single_rename.changed }}"
       - "{{ single_rename.action.type == 'rename' }}"
       - "{{ single_rename.action.resource_type == 'droplet' }}"
       - "{{ single_rename.action.resource_id == droplet_action.droplet.id }}"
@@ -232,6 +245,7 @@
 - name: droplet_action | single | kernel | update | verify
   assert:
     that:
+      - "{{ single_kernel_update.changed }}"
       - "{{ single_kernel_update.action.type == 'change_kernel' }}"
       - "{{ single_kernel_update.action.resource_type == 'droplet' }}"
       - "{{ single_kernel_update.action.resource_id == droplet_action.droplet.id }}"
@@ -242,13 +256,14 @@
   doboto_droplet:
     action: snapshot_create
     id: "{{ droplet_action.droplet.id }}"
-    name: "how-bow-dah"
+    snapshot_name: "how-bow-dah"
     wait: true
   register: single_snapshot_create
 
 - name: droplet_action | single | snapshot | create | verify
   assert:
     that:
+      - "{{ single_snapshot_create.changed }}"
       - "{{ single_snapshot_create.action.type == 'snapshot' }}"
       - "{{ single_snapshot_create.action.resource_type == 'droplet' }}"
       - "{{ single_snapshot_create.action.resource_id == droplet_action.droplet.id }}"
@@ -272,6 +287,7 @@
 - name: droplet_action | single | restore | verify
   assert:
     that:
+      - "{{ single_restore.changed }}"
       - "{{ single_restore.action.type == 'restore' }}"
       - "{{ single_restore.action.resource_type == 'droplet' }}"
       - "{{ single_restore.action.resource_id == droplet_action.droplet.id }}"
@@ -288,6 +304,7 @@
 - name: droplet_action | single | action_info | verify
   assert:
     that:
+      - "{{ not single_action_info.changed }}"
       - "{{ single_action_info.action.type == 'restore' }}"
       - "{{ single_action_info.action.resource_type == 'droplet' }}"
       - "{{ single_action_info.action.resource_id == droplet_action.droplet.id }}"
@@ -317,6 +334,7 @@
 - name: droplet_action | multiple | backup_enable | verify
   assert:
     that:
+      - "{{ multiple_backup_enable.changed }}"
       - "{{ multiple_backup_enable.actions[0].type == 'enable_backups' }}"
       - "{{ multiple_backup_enable.actions[0].resource_type == 'droplet' }}"
       - "{{ multiple_backup_enable.actions[0].status != 'in-progress' }}"
@@ -335,6 +353,7 @@
 - name: droplet_action | multiple | backup_disable | verify
   assert:
     that:
+      - "{{ multiple_backup_disable.changed }}"
       - "{{ multiple_backup_disable.actions[0].type == 'disable_backups' }}"
       - "{{ multiple_backup_disable.actions[0].resource_type == 'droplet' }}"
       - "{{ multiple_backup_disable.actions[0].status != 'in-progress' }}"
@@ -353,6 +372,7 @@
 - name: droplet_action | multiple | shutdown | verify
   assert:
     that:
+      - "{{ multiple_shutdown.changed }}"
       - "{{ multiple_shutdown.actions[0].type == 'shutdown' }}"
       - "{{ multiple_shutdown.actions[0].resource_type == 'droplet' }}"
       - "{{ multiple_shutdown.actions[0].status != 'in-progress' }}"
@@ -371,6 +391,7 @@
 - name: droplet_action | multiple | power_off | verify
   assert:
     that:
+      - "{{ multiple_power_off.changed }}"
       - "{{ multiple_power_off.actions[0].type == 'power_off' }}"
       - "{{ multiple_power_off.actions[0].resource_type == 'droplet' }}"
       - "{{ multiple_power_off.actions[0].status != 'in-progress' }}"
@@ -389,6 +410,7 @@
 - name: droplet_action | multiple | private_networking_enable | verify
   assert:
     that:
+      - "{{ multiple_private_networking_enable.changed }}"
       - "{{ multiple_private_networking_enable.actions[0].type == 'enable_private_networking' }}"
       - "{{ multiple_private_networking_enable.actions[0].resource_type == 'droplet' }}"
       - "{{ multiple_private_networking_enable.actions[0].status != 'in-progress' }}"
@@ -407,6 +429,7 @@
 - name: droplet_action | multiple | ipv6_enable | verify
   assert:
     that:
+      - "{{ multiple_ipv6_enable.changed }}"
       - "{{ multiple_ipv6_enable.actions[0].type == 'enable_ipv6' }}"
       - "{{ multiple_ipv6_enable.actions[0].resource_type == 'droplet' }}"
       - "{{ multiple_ipv6_enable.actions[0].status != 'in-progress' }}"
@@ -425,6 +448,7 @@
 - name: droplet_action | multiple | power_on | verify
   assert:
     that:
+      - "{{ multiple_power_on.changed }}"
       - "{{ multiple_power_on.actions[0].type == 'power_on' }}"
       - "{{ multiple_power_on.actions[0].resource_type == 'droplet' }}"
       - "{{ multiple_power_on.actions[0].status != 'in-progress' }}"
@@ -443,6 +467,7 @@
 - name: droplet_action | multiple | power_cycle | verify
   assert:
     that:
+      - "{{ multiple_power_cycle.changed }}"
       - "{{ multiple_power_cycle.actions[0].type == 'power_cycle' }}"
       - "{{ multiple_power_cycle.actions[0].resource_type == 'droplet' }}"
       - "{{ multiple_power_cycle.actions[0].status != 'in-progress' }}"
@@ -451,19 +476,21 @@
       - "{{ multiple_power_cycle.actions[1].status != 'in-progress' }}"
     msg: "{{ multiple_power_cycle }}"
 
-
-- name: droplet_action | multiple | snapshot | create
-  doboto_droplet:
-    action: snapshot_create
-    tag_name: some
-    name: cash-me-ousside
-    wait: true
-  register: multiple_snapshot_create
-
-- name: droplet_action | multiple | snapshot | verify
-  assert:
-    that:
-      - "{{ multiple_snapshot_create.action.type == 'snapshot' }}"
-      - "{{ multiple_snapshot_create.action.resource_type == 'droplet' }}"
-      - "{{ multiple_snapshot_create.action.status != 'in-progress' }}"
-    msg: "{{ multiple_snapshot_create }}"
+# Commented out as the endpoint is currently broken
+#
+#- name: droplet_action | multiple | snapshot | create
+#  doboto_droplet:
+#    action: snapshot_create
+#    tag_name: some
+#    snapshot_name: cash-me-ousside
+#    wait: true
+#  register: multiple_snapshot_create
+#
+#- name: droplet_action | multiple | snapshot | verify
+#  assert:
+#    that:
+#      - "{{ multiple_snapshot_create.changed }}"
+#      - "{{ multiple_snapshot_create.action.type == 'snapshot' }}"
+#      - "{{ multiple_snapshot_create.action.resource_type == 'droplet' }}"
+#      - "{{ multiple_snapshot_create.action.status != 'in-progress' }}"
+#    msg: "{{ multiple_snapshot_create }}"

@@ -12,7 +12,7 @@
   doboto_droplet:
     action: snapshot_create
     id: "{{ snapshot_droplet.droplet.id }}"
-    name: "how-bow-dah"
+    snapshot_name: "how-bow-dah"
     wait: true
   register: snapshot_droplet_snapshot_create
 
@@ -40,6 +40,7 @@
 - name: snapshot | list | verify
   assert:
     that:
+      - "{{ not snapshot_list.changed }}"
       - "{{ snapshot_list|length == 2 }}"
     msg: "{{ snapshot_list }}"
 
@@ -52,6 +53,7 @@
 - name: snapshot | list | droplet | verify
   assert:
     that:
+      - "{{ not snapshot_list_droplet.changed }}"
       - "{{ snapshot_list_droplet.snapshots[0].name == 'how-bow-dah' }}"
     msg: "{{ snapshot_list_droplet }}"
 
@@ -64,6 +66,7 @@
 - name: snapshot | list | volume | verify
   assert:
     that:
+      - "{{ not snapshot_list_volume.changed }}"
       - "{{ snapshot_list_volume.snapshots[0].name == 'cash-me-ousside' }}"
     msg: "{{ snapshot_list_volume }}"
 
@@ -76,6 +79,7 @@
 - name: snapshot | info | verify
   assert:
     that:
+      - "{{ not snapshot_info.changed }}"
       - "{{ snapshot_info.snapshot.name == 'how-bow-dah' }}"
     msg: "{{ snapshot_info }}"
 
@@ -88,5 +92,6 @@
 - name: snapshot | destroy | verify
   assert:
     that:
-      - "{{ volume_destroy.result.status == 204 }}"
+      - "{{ volume_destroy.changed }}"
+      - "{{ volume_destroy.result is none }}"
     msg: "{{ volume_destroy }}"

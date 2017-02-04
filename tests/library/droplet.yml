@@ -11,6 +11,7 @@
 - name: droplet | create | simple | verify
   assert:
     that:
+      - "{{ droplet_create.changed }}"
       - "{{ droplet_create.droplet.name == 'droplet-create' }}"
       - "{{ droplet_create.droplet.region.slug == 'nyc3' }}"
       - "{{ droplet_create.droplet.size.slug == '1gb' }}"
@@ -34,6 +35,7 @@
 - name: droplet | create | multiple | verify
   assert:
     that:
+      - "{{ droplets_create.changed }}"
       - "{{ droplets_create.droplets[0].name == 'droplet-create-01' }}"
       - "{{ droplets_create.droplets[1].name == 'droplet-create-02' }}"
       - "{{ droplets_create.droplets[2].name == 'droplet-create-03' }}"
@@ -51,6 +53,7 @@
 - name: droplet | present | simple | verify
   assert:
     that:
+      - "{{ not droplet_present_exists.changed }}"
       - "{{ droplet_present_exists.droplet.name == 'droplet-create' }}"
       - "{{ droplet_present_exists.droplet.region.slug == 'nyc3' }}"
       - "{{ droplet_present_exists.droplet.size.slug == '1gb' }}"
@@ -88,6 +91,7 @@
 - name: droplet | present | complex | verify
   assert:
     that:
+      - "{{ droplet_present_new.changed }}"
       - "{{ droplet_present_new.droplet.name == 'droplet-present' }}"
       - "{{ droplet_present_new.droplet.region.slug == 'nyc3' }}"
       - "{{ droplet_present_new.droplet.size.slug == '2gb' }}"
@@ -132,6 +136,7 @@
 - name: droplet | present | multiple | exists | verify
   assert:
     that:
+      - "{{ not droplets_present_exists.changed }}"
       - "{{ droplets_present_exists.droplets[0].name == 'droplet-create-01' }}"
       - "{{ droplets_present_exists.droplets[1].name == 'droplet-create-02' }}"
       - "{{ droplets_present_exists.droplets[2].name == 'droplet-create-03' }}"
@@ -153,6 +158,7 @@
 - name: droplet | present | multiple | new | verify
   assert:
     that:
+      - "{{ droplets_present_new.changed }}"
       - "{{ droplets_present_new.droplets[0].name == 'droplet-create-04' }}"
       - "{{ droplets_present_new.droplets[1].name == 'droplet-create-05' }}"
     msg: "{{ droplets_present_new }}"
@@ -174,9 +180,11 @@
 - name: droplet | present | multiple | mixed | verify
   assert:
     that:
+      - "{{ droplets_present_mixed.changed }}"
       - "{{ droplets_present_mixed.droplets[0].name == 'droplet-create-04' }}"
       - "{{ droplets_present_mixed.droplets[1].name == 'droplet-create-05' }}"
       - "{{ droplets_present_mixed.droplets[2].name == 'droplet-create-06' }}"
+      - "{{ droplets_present_mixed.created[0].name == 'droplet-create-06' }}"
     msg: "{{ droplets_present_mixed }}"
 
 - name: droplet | info
@@ -188,6 +196,7 @@
 - name: droplet | info | verify
   assert:
     that:
+      - "{{ not droplet_info.changed }}"
       - "{{ droplet_info.droplet.name == 'droplet-create' }}"
     msg: "{{ droplet_info }}"
 
@@ -199,6 +208,7 @@
 - name: droplet | list | verify
   assert:
     that:
+      - "{{ not droplets_list.changed }}"
       - "{{ droplets_list.droplets|length == 8 }}"
       - "{{ droplets_list|json_query(droplet_create_query) == droplet_create.droplet.id }}"
       - "{{ droplets_list|json_query(droplet_create_01_query) == droplets_create.droplets[0].id }}"
@@ -228,6 +238,7 @@
 - name: droplet | list | tag | verify
   assert:
     that:
+      - "{{ not droplets_list_tag.changed }}"
       - "{{ droplets_list_tag.droplets|length == 3 }}"
       - "{{ droplets_list_tag|json_query(droplet_create_04_query) == droplets_present_new.droplets[0].id }}"
       - "{{ droplets_list_tag|json_query(droplet_create_05_query) == droplets_present_new.droplets[1].id }}"
@@ -247,6 +258,7 @@
 - name: droplet | kernel | list | verify
   assert:
     that:
+      - "{{ not droplet_kernel_list.changed }}"
       - "{{ droplet_kernel_list.kernels|length > 0 }}"
     msg: "{{ droplet_kernel_list }}"
 
@@ -259,6 +271,7 @@
 - name: droplet | snapshot | list | verify
   assert:
     that:
+      - "{{ not droplet_snapshot_list.changed }}"
       - "{{ droplet_snapshot_list.snapshots|length > -1 }}"
     msg: "{{ droplet_snapshot_list }}"
 
@@ -271,6 +284,7 @@
 - name: droplet | backups | verify
   assert:
     that:
+      - "{{ not droplet_backup_list.changed }}"
       - "{{ droplet_backup_list.backups|length > -1 }}"
     msg: "{{ droplet_backup_list }}"
 
@@ -283,6 +297,7 @@
 - name: droplet | action | list | verify
   assert:
     that:
+      - "{{ not droplet_action_list.changed }}"
       - "{{ droplet_action_list.actions|length > 0 }}"
     msg: "{{ droplet_action_list }}"
 
@@ -295,7 +310,8 @@
 - name: droplet | destroy | by id | verify
   assert:
     that:
-      - "{{ droplet_id_destroy.result.status == 204 }}"
+      - "{{ droplet_id_destroy.changed }}"
+      - "{{ droplet_id_destroy.result is none }}"
     msg: "{{ droplet_id_destroy }}"
 
 - name: droplet | destroy | by tag
@@ -307,7 +323,8 @@
 - name: droplet | destroy | by tag | verify
   assert:
     that:
-      - "{{ droplet_tag_destroy.result.status == 204 }}"
+      - "{{ droplet_tag_destroy.changed }}"
+      - "{{ droplet_tag_destroy.result is none }}"
     msg: "{{ droplet_tag_destroy }}"
 
 - name: droplet | neighbor | list
@@ -319,6 +336,7 @@
 - name: droplet | neighbors | verify
   assert:
     that:
+      - "{{ not droplet_neighbor_list.changed }}"
       - "{{ droplet_neighbor_list.droplets|length > -1 }}"
     msg: "{{ droplet_neighbor_list }}"
 
@@ -330,5 +348,6 @@
 - name: droplet | droplet_neighbor_list | verify
   assert:
     that:
+      - "{{ not droplet_droplet_neighbor_list.changed }}"
       - "{{ droplet_droplet_neighbor_list.neighbors|length > -1 }}"
     msg: "{{ droplet_droplet_neighbor_list }}"

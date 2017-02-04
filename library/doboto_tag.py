@@ -5,7 +5,7 @@ import os
 import copy
 from ansible.module_utils.basic import AnsibleModule
 from doboto.DO import DO
-
+from doboto.DOBOTOException import DOBOTOException
 
 """
 
@@ -44,6 +44,7 @@ options:
         tag action
         choices:
             - list
+            - names
             - create
             - present
             - info
@@ -78,6 +79,23 @@ EXAMPLES = '''
 '''
 
 
+def require(*required):
+    def requirer(function):
+        def wrapper(*args, **kwargs):
+            params = required
+            if not isinstance(params, tuple):
+                params = (params,)
+            met = False
+            for param in params:
+                if args[0].module.params[param] is not None:
+                    met = True
+            if not met:
+                args[0].module.fail_json(msg="the %s parameter is required" % " or ".join(params))
+            function(*args, **kwargs)
+        return wrapper
+    return requirer
+
+
 class Tag(object):
 
     url = "https://api.digitalocean.com/v2"
@@ -103,6 +121,7 @@ class Tag(object):
         return AnsibleModule(argument_spec=dict(
             action=dict(default=None, required=True, choices=[
                 "list",
+                "names",
                 "create",
                 "present",
                 "info",
@@ -122,41 +141,24 @@ class Tag(object):
         ))
 
     def act(self):
-
-        getattr(self, self.module.params["action"])()
+        try:
+            getattr(self, self.module.params["action"])()
+        except DOBOTOException as exception:
+            self.module.fail_json(msg=exception.message, result=exception.result)
 
     def list(self):
+        self.module.exit_json(changed=False, tags=self.do.tag.list())
 
-        result = self.do.tag.list()
+    def names(self):
+        self.module.exit_json(changed=False, names=self.do.tag.names())
 
-        if "tags" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=False, tags=result["tags"])
-
+    @require("name")
     def create(self):
+        self.module.exit_json(changed=True, tag=self.do.tag.create(self.module.params["name"]))
 
-        if self.module.params["name"] is None:
-            self.module.fail_json(msg="the name parameter is required")
-
-        result = self.do.tag.create(self.module.params["name"])
-
-        if "tag" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=True, tag=result['tag'])
-
+    @require("name")
     def present(self):
-
-        if self.module.params["name"] is None:
-            self.module.fail_json(msg="the name parameter is required")
-
-        result = self.do.tag.list()
-
-        if "tags" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        tags = result["tags"]
+        tags = self.do.tag.list()
 
         existing = None
         for tag in tags:
@@ -169,45 +171,16 @@ class Tag(object):
         else:
             self.create()
 
+    @require("name")
     def info(self):
+        self.module.exit_json(changed=False, tag=self.do.tag.info(self.module.params["name"]))
 
-        result = None
-
-        if self.module.params["name"] is None:
-            self.module.fail_json(msg="the name parameter is required")
-
-        result = self.do.tag.info(self.module.params["name"])
-
-        if "tag" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=False, tag=result['tag'])
-
-    def names(self):
-
-        result = self.do.tag.names()
-
-        if "tags" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=False, tags=result["tags"])
-
+    @require("name")
+    @require("new_name")
     def update(self):
-
-        result = None
-
-        if self.module.params["name"] is None:
-            self.module.fail_json(msg="the name parameter is required")
-
-        if self.module.params["new_name"] is None:
-            self.module.fail_json(msg="the new_name parameter is required")
-
-        result = self.do.tag.update(self.module.params["name"], self.module.params["new_name"])
-
-        if "tag" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=True, tag=result['tag'])
+        self.module.exit_json(changed=True, tag=self.do.tag.update(
+            self.module.params["name"], self.module.params["new_name"]
+        ))
 
     def build(self):
 
@@ -233,13 +206,9 @@ class Tag(object):
 
         return resources
 
+    @require("name")
     def attach(self):
 
-        result = None
-
-        if self.module.params["name"] is None:
-            self.module.fail_json(msg="the name parameter is required")
-
         resources = self.build()
 
         if not resources:
@@ -247,20 +216,13 @@ class Tag(object):
                 msg="the resources or resource_type and resource_id(s) parameters are required"
             )
 
-        result = self.do.tag.attach(self.module.params["name"], resources)
+        self.module.exit_json(changed=True, result=self.do.tag.attach(
+            self.module.params["name"], resources
+        ))
 
-        if "status" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=True, result=result)
-
+    @require("name")
     def detach(self):
 
-        result = None
-
-        if self.module.params["name"] is None:
-            self.module.fail_json(msg="the name parameter is required")
-
         resources = self.build()
 
         if not resources:
@@ -268,25 +230,14 @@ class Tag(object):
                 msg="the resources or resource_type and resource_id(s) parameters are required"
             )
 
-        result = self.do.tag.detach(self.module.params["name"], resources)
+        self.module.exit_json(changed=True, result=self.do.tag.detach(
+            self.module.params["name"], resources
+        ))
 
-        if "status" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=True, result=result)
-
+    @require("name")
     def destroy(self):
-
-        result = None
-
-        if self.module.params["name"] is None:
-            self.module.fail_json(msg="the name parameter is required")
-
-        result = self.do.tag.destroy(self.module.params["name"])
-
-        if "status" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=True, result=result)
+        self.module.exit_json(changed=True, result=self.do.tag.destroy(
+            self.module.params["name"]
+        ))
 
 Tag()

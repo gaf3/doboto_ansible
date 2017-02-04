@@ -3,7 +3,7 @@
 
 - name: ssh_key | create | generate fingerprint
   command: ssh-keygen -lf /tmp/id_doboto.pub
-  register: key_list
+  register: ssh_key_fingerprint
 
 - name: ssh_key | create
   doboto_ssh_key:
@@ -16,9 +16,10 @@
 - name: ssh_key | create | verify
   assert:
     that:
+      - "{{ ssh_key_create.changed }}"
       - "{{ ssh_key_create.ssh_key.name == 'ssh-key-create' }}"
       - "{{ ssh_key_create.ssh_key.public_key == lookup('file', '/tmp/id_doboto.pub') }}"
-      - "{{ ssh_key_create.ssh_key.fingerprint == key_list.stdout.split()[1] }}"
+      - "{{ ssh_key_create.ssh_key.fingerprint == ssh_key_fingerprint.stdout.split()[1] }}"
     msg: "{{ ssh_key_create }}"
 
 - name: ssh_key | present | exists
@@ -31,9 +32,10 @@
 - name: ssh_key | present | exists | verify
   assert:
     that:
+      - "{{ not ssh_key_present_exists.changed }}"
       - "{{ ssh_key_present_exists.ssh_key.name == 'ssh-key-create' }}"
       - "{{ ssh_key_present_exists.ssh_key.public_key == lookup('file', '/tmp/id_doboto.pub') }}"
-      - "{{ ssh_key_present_exists.ssh_key.fingerprint == key_list.stdout.split()[1] }}"
+      - "{{ ssh_key_present_exists.ssh_key.fingerprint == ssh_key_fingerprint.stdout.split()[1] }}"
     msg: "{{ ssh_key_present_exists }}"
 
 - name: ssh_key | present | not exists | generate key
@@ -53,6 +55,7 @@
 - name: ssh_key | present | not exists | verify
   assert:
     that:
+      - "{{ ssh_key_present_not_exists.changed }}"
       - "{{ ssh_key_present_not_exists.ssh_key.name == 'ssh-key-present' }}"
       - "{{ ssh_key_present_not_exists.ssh_key.public_key == lookup('file', '/tmp/id_doboto_present.pub') }}"
       - "{{ ssh_key_present_not_exists.ssh_key.fingerprint == key_list_present.stdout.split()[1] }}"
@@ -66,6 +69,7 @@
 - name: ssh_key | list | verify
   assert:
     that:
+      - "{{ not ssh_key_list.changed }}"
       - "{{ ssh_key_list|json_query(ssh_key_create_query) == ssh_key_create.ssh_key.id }}"
     msg: "{{ ssh_key_list }}"
   vars:
@@ -80,6 +84,7 @@
 - name: ssh_key | info | by id | verify
   assert:
     that:
+      - "{{ ssh_key_create.changed }}"
       - "{{ ssh_key_create.ssh_key == ssh_key_id_info.ssh_key }}"
     msg: "{{ ssh_key_id_info }}"
 
@@ -92,6 +97,7 @@
 - name: ssh_key | info | by fingerprint | verify
   assert:
     that:
+      - "{{ not ssh_key_fingerprint_info.changed }}"
       - "{{ ssh_key_create.ssh_key == ssh_key_fingerprint_info.ssh_key }}"
     msg: "{{ ssh_key_fingerprint_info }}"
 
@@ -105,6 +111,7 @@
 - name: ssh_key | update | by id | verify
   assert:
     that:
+      - "{{ ssh_key_id_update.changed }}"
       - "{{ ssh_key_id_update.ssh_key.name == 'ssh-key-id-update' }}"
     msg: "{{ ssh_key_id_update }}"
 
@@ -118,6 +125,7 @@
 - name: ssh_key | update | by fingerprint | verify
   assert:
     that:
+      - "{{ ssh_key_fingerprint_update.changed }}"
       - "{{ ssh_key_fingerprint_update.ssh_key.name == 'ssh-key-fingerprint-update' }}"
     msg: "{{ ssh_key_fingerprint_update }}"
 
@@ -130,7 +138,8 @@
 - name: ssh_key | destroy | by id | verify
   assert:
     that:
-      - "{{ ssh_key_id_destroy.result.status == 204 }}"
+      - "{{ ssh_key_id_destroy.changed }}"
+      - "{{ ssh_key_id_destroy.result is none }}"
     msg: "{{ ssh_key_id_destroy }}"
 
 - name: ssh_key | destroy | by fingerprint | create
@@ -142,11 +151,12 @@
 - name: ssh_key | destroy | by fingerprint
   doboto_ssh_key:
     action: destroy
-    fingerprint: "{{ key_list.stdout.split()[1] }}"
+    fingerprint: "{{ ssh_key_fingerprint.stdout.split()[1] }}"
   register: ssh_key_fingerprint_destroy
 
 - name: ssh_key | destroy | by fingerprint | verify
   assert:
     that:
-      - "{{ ssh_key_fingerprint_destroy.result.status == 204 }}"
+      - "{{ ssh_key_fingerprint_destroy.changed }}"
+      - "{{ ssh_key_fingerprint_destroy.result is none }}"
     msg: "{{ ssh_key_fingerprint_destroy }}"

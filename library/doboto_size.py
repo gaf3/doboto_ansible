@@ -4,6 +4,7 @@
 import os
 from ansible.module_utils.basic import AnsibleModule
 from doboto.DO import DO
+from doboto.DOBOTOException import DOBOTOException
 
 """
 
@@ -82,17 +83,13 @@ class Size(object):
         ))
 
     def act(self):
-
-        getattr(self, self.module.params["action"])()
+        try:
+            getattr(self, self.module.params["action"])()
+        except DOBOTOException as exception:
+            self.module.fail_json(msg=exception.message, result=exception.result)
 
     def list(self):
-
-        result = self.do.size.list()
-
-        if "sizes" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=False, sizes=result["sizes"])
+        self.module.exit_json(changed=False, sizes=self.do.size.list())
 
 
 Size()

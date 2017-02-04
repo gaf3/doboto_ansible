@@ -226,7 +226,7 @@
 - name: volume | destroy | by id | verify
   assert:
     that:
-      - "{{ volume_destroy_id.result.status == 204 }}"
+      - "{{ volume_destroy_id.result is none }}"
     msg: "{{ volume_destroy_id }}"
 
 - name: volume | destroy | by name region
@@ -239,5 +239,5 @@
 - name: volume | destroy | by name region | verify
   assert:
     that:
-      - "{{ volume_destroy_name_region.result.status == 204 }}"
+      - "{{ volume_destroy_name_region.result is none }}"
     msg: "{{ volume_destroy_name_region }}"

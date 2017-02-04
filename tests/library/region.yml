@@ -6,6 +6,7 @@
 - name: region | list | verify
   assert:
     that:
+      - "{{ not region_list.changed }}"
       - "{{ region_list|json_query(region_slug_query) == 'New York 1' }}"
     msg: "{{ region_list }}"
   vars:

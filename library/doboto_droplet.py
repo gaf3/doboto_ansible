@@ -6,6 +6,7 @@ import time
 import copy
 from ansible.module_utils.basic import AnsibleModule
 from doboto.DO import DO
+from doboto.DOBOTOException import DOBOTOException
 
 """
 
@@ -151,6 +152,23 @@ EXAMPLES = '''
 '''
 
 
+def require(*required):
+    def requirer(function):
+        def wrapper(*args, **kwargs):
+            params = required
+            if not isinstance(params, tuple):
+                params = (params,)
+            met = False
+            for param in params:
+                if args[0].module.params[param] is not None:
+                    met = True
+            if not met:
+                args[0].module.fail_json(msg="the %s parameter is required" % " or ".join(params))
+            function(*args, **kwargs)
+        return wrapper
+    return requirer
+
+
 class Droplet(object):
 
     url = "https://api.digitalocean.com/v2"
@@ -222,6 +240,7 @@ class Droplet(object):
             volume=dict(default=None, type='list'),
             tags=dict(type='list'),
             tag_name=dict(default=None),
+            snapshot_name=dict(default=None),
             wait=dict(default=False, type='bool'),
             poll=dict(default=5, type='int'),
             timeout=dict(default=300, type='int'),
@@ -232,73 +251,58 @@ class Droplet(object):
 
     def act(self):
 
-        if self.module.params["action"] in [
-            "kernel_list",
-            "snapshot_list",
-            "backup_list",
-            "action_list"
-        ]:
-            self.list_action(self.module.params["action"].replace('_list', 's'))
-        elif self.module.params["action"] in [
-            "backup_enable",
-            "backup_disable",
-            "shutdown",
-            "power_cycle",
-            "power_on",
-            "power_off",
-            "private_networking_enable",
-            "ipv6_enable"
-        ]:
-            self.action()
-        elif self.module.params["action"] in [
-            "reboot",
-            "password_reset"
-        ]:
-            self.action(tagless=True)
-        elif self.module.params["action"] == "neighbor_list":
-            self.list_action("droplets")
-        else:
-            getattr(self, self.module.params["action"])()
+        try:
+
+            if self.module.params["action"] in [
+                "kernel_list",
+                "snapshot_list",
+                "backup_list",
+                "action_list"
+            ]:
+                self.list_action(self.module.params["action"].replace('_list', 's'))
+            elif self.module.params["action"] in [
+                "backup_enable",
+                "backup_disable",
+                "shutdown",
+                "power_cycle",
+                "power_on",
+                "power_off",
+                "private_networking_enable",
+                "ipv6_enable"
+            ]:
+                self.action()
+            elif self.module.params["action"] in [
+                "reboot",
+                "password_reset"
+            ]:
+                self.action(tagless=True)
+            elif self.module.params["action"] == "neighbor_list":
+                self.list_action("droplets")
+            else:
+                getattr(self, self.module.params["action"])()
+
+        except DOBOTOException as exception:
+            self.module.fail_json(msg=exception.message, result=exception.result)
 
     def list(self):
-
-        result = None
-
-        if self.module.params["tag_name"] is None:
-            result = self.do.droplet.list()
-        else:
-            result = self.do.droplet.list(tag_name=self.module.params["tag_name"])
-
-        if "droplets" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=False, droplets=result["droplets"])
+        self.module.exit_json(changed=False, droplets=self.do.droplet.list(
+            tag_name=self.module.params["tag_name"])
+        )
 
     def droplet_neighbor_list(self):
+        self.module.exit_json(changed=False, neighbors=self.do.droplet.droplet_neighbor_list())
 
-        result = self.do.droplet.droplet_neighbor_list()
-
-        if "neighbors" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=True, neighbors=result["neighbors"])
-
+    @require("id")
     def list_action(self, key=None):
 
         if key is None:
             key = self.module.params["action"]
 
-        result = None
-
-        if self.module.params["id"] is None:
-            self.module.fail_json(msg="the id parameter is required")
-
-        result = getattr(self.do.droplet, self.module.params["action"])(self.module.params["id"])
-
-        if key not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=False, **{key: result[key]})
+        self.module.exit_json(changed=False,
+            **{key: getattr(self.do.droplet, self.module.params["action"])(
+               self.module.params["id"]
+            )}
+        )
 
     def ready(self, droplet, existing):
 
@@ -325,6 +329,10 @@ class Droplet(object):
 
         return True
 
+    @require("name", "names")
+    @require("region")
+    @require("size")
+    @require("image")
     def create(self, existing=None):
 
         if existing is None:
@@ -332,22 +340,11 @@ class Droplet(object):
 
         existing_names = {droplet["name"]: True for droplet in existing}
 
-        attribs = {}
-
-        if self.module.params["name"] is not None:
-            attribs["name"] = self.module.params["name"]
-        elif self.module.params["names"] is not None:
-            attribs["names"] = []
-            for name in self.module.params["names"]:
-                if name not in existing_names:
-                    attribs["names"].append(name)
-        else:
-            self.module.fail_json(msg="the name or names parameter is required")
-
-        for required in ['region', 'size', 'image']:
-            if self.module.params[required] is None:
-                self.module.fail_json(msg="the %s parameter is required" % required)
-            attribs[required] = self.module.params[required]
+        attribs = {
+            "region": self.module.params["region"],
+            "size": self.module.params["size"],
+            "image": self.module.params["image"],
+        }
 
         for optional in [
             'ssh_keys', 'volume', 'tags', 'backups', 'ipv6',
@@ -358,33 +355,36 @@ class Droplet(object):
         if self.module.params['extra'] is not None:
             attribs.update(self.module.params['extra'])
 
-        result = self.do.droplet.create(attribs)
+        if self.module.params["name"] is not None:
 
-        if "droplet" not in result and "droplets" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
+            attribs["name"] = self.module.params["name"]
 
-        if "droplet" in result:
-
-            droplet = result["droplet"]
+            droplet = self.do.droplet.create(attribs)
 
             start_time = time.time()
 
-            while self.module.params["wait"] and not self.ready(result["droplet"], existing):
+            while self.module.params["wait"] and not self.ready(droplet, existing):
 
                 time.sleep(self.module.params["poll"])
-                latest = self.do.droplet.info(droplet["id"])
-                if "droplet" in latest:
-                    result = latest
+                try:
+                    droplet = self.do.droplet.info(droplet["id"])
+                except:
+                    pass
 
                 if time.time() - start_time > self.module.params["timeout"]:
-                    self.module.fail_json(msg="Timeout on polling", droplet=result['droplet'])
+                    self.module.fail_json(msg="Timeout on polling", droplet=droplet)
 
-            self.module.exit_json(changed=True, droplet=result['droplet'])
+            self.module.exit_json(changed=True, droplet=droplet)
 
-        elif "droplets" in result:
+        elif self.module.params["names"] is not None:
+
+            attribs["names"] = []
+            for name in self.module.params["names"]:
+                if name not in existing_names:
+                    attribs["names"].append(name)
 
             droplets = copy.deepcopy(existing)
-            droplets.extend(result["droplets"])
+            droplets.extend(self.do.droplet.create(attribs))
 
             start_time = time.time()
 
@@ -395,9 +395,10 @@ class Droplet(object):
 
                 for index, droplet in enumerate(droplets):
                     if not self.ready(droplet, existing):
-                        latest = self.do.droplet.info(droplet["id"])
-                        if "droplet" in latest:
-                            droplets[index] = latest["droplet"]
+                        try:
+                            droplets[index] = self.do.droplet.info(droplet["id"])
+                        except:
+                            pass
 
                 if time.time() - start_time > self.module.params["timeout"]:
                     self.module.fail_json(msg="Timeout on polling", droplets=droplets)
@@ -408,21 +409,10 @@ class Droplet(object):
                 created = [droplet for droplet in droplets if droplet["name"] not in existing_names]
                 self.module.exit_json(changed=True, droplets=droplets, created=created)
 
-        else:
-
-            self.module.fail_json(msg="DO API error", result=result)
-
+    @require("name", "names")
     def present(self):
 
-        if self.module.params["name"] is None and self.module.params["names"] is None:
-            self.module.fail_json(msg="the name or names parameter is required")
-
-        result = self.do.droplet.list()
-
-        if "droplets" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        droplets = result["droplets"]
+        droplets = self.do.droplet.list()
 
         if self.module.params["name"] is not None:
 
@@ -452,87 +442,57 @@ class Droplet(object):
             else:
                 self.create(existing)
 
+    @require("id")
     def info(self):
+        self.module.exit_json(changed=False, droplet=self.do.droplet.info(
+            self.module.params["id"]
+        ))
 
-        result = None
-
-        if self.module.params["id"] is None:
-            self.module.fail_json(msg="the id parameter is required")
-
-        result = self.do.droplet.info(self.module.params["id"])
-
-        if "droplet" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=False, droplet=result["droplet"])
-
+    @require("id", "tag_name")
     def destroy(self):
+        self.module.exit_json(changed=True, result=self.do.droplet.destroy(
+            id=self.module.params["id"], tag_name=self.module.params["tag_name"]
+        ))
 
-        result = None
+    def action_result(self, action):
 
-        if self.module.params["id"] is not None:
-            result = self.do.droplet.destroy(id=self.module.params["id"])
-        elif self.module.params["tag_name"] is not None:
-            result = self.do.droplet.destroy(tag_name=self.module.params["tag_name"])
-        else:
-            self.module.fail_json(msg="the id or tag_name parameter is required")
+        start_time = time.time()
 
-        if "status" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
+        while self.module.params["wait"] and action["status"] == "in-progress":
 
-        self.module.exit_json(changed=True, result=result)
+            time.sleep(self.module.params["poll"])
+            try:
+                action = self.do.action.info(action["id"])
+            except:
+                pass
 
-    def action_result(self, result):
+            if time.time() - start_time > self.module.params["timeout"]:
+                self.module.fail_json(msg="Timeout on polling", action=action)
 
-        if "action" in result:
+        self.module.exit_json(changed=True, action=action)
 
-            action = result["action"]
+    def actions_result(self, actions):
 
-            start_time = time.time()
+        start_time = time.time()
 
-            while self.module.params["wait"] and result["action"]["status"] == "in-progress":
+        while self.module.params["wait"] and \
+                len([1 for action in actions if action["status"] == "in-progress"]) > 0:
 
-                time.sleep(self.module.params["poll"])
-                latest = self.do.action.info(action["id"])
-                if "action" in latest:
-                    result = latest
+            time.sleep(self.module.params["poll"])
 
-                if time.time() - start_time > self.module.params["timeout"]:
-                    self.module.fail_json(msg="Timeout on polling", action=result['action'])
+            for index, action in enumerate(actions):
+                if action["status"] == "in-progress":
+                    try:
+                        actions[index] = self.do.droplet.action_info(
+                            action["resource_id"], action["id"]
+                        )
+                    except:
+                        pass
 
-            self.module.exit_json(changed=True, action=result["action"])
+            if time.time() - start_time > self.module.params["timeout"]:
+                self.module.fail_json(msg="Timeout on polling", actions=actions)
 
-        else:
-
-            self.module.fail_json(msg="DO API error", result=result)
-
-    def actions_result(self, result):
-
-        if "actions" in result:
-
-            actions = result["actions"]
-
-            start_time = time.time()
-
-            while self.module.params["wait"] and \
-                    len([1 for action in actions if action["status"] == "in-progress"]) > 0:
-
-                time.sleep(self.module.params["poll"])
-
-                for index, action in enumerate(actions):
-                    if action["status"] == "in-progress":
-                        latest = self.do.droplet.action_info(action["resource_id"], action["id"])
-                        if "action" in latest:
-                            actions[index] = latest["action"]
-
-                if time.time() - start_time > self.module.params["timeout"]:
-                    self.module.fail_json(msg="Timeout on polling", droplets=droplets)
-
-            self.module.exit_json(changed=True, actions=actions)
-
-        else:
-
-            self.module.fail_json(msg="DO API error", result=result)
+        self.module.exit_json(changed=True, actions=actions)
 
     def action(self, tagless=False):
 
@@ -558,128 +518,56 @@ class Droplet(object):
 
             self.module.fail_json(msg="the id or tag_name parameter is required")
 
+    @require("id")
+    @require("image")
     def restore(self):
+        self.action_result(self.do.droplet.restore(
+            self.module.params["id"], self.module.params["image"]
+        ))
 
-        result = None
-
-        if self.module.params["id"] is None:
-            self.module.fail_json(msg="the id parameter is required")
-
-        if self.module.params["image"] is None:
-            self.module.fail_json(msg="the image parameter is required")
-
-        result = self.do.droplet.restore(self.module.params["id"], self.module.params["image"])
-
-        self.action_result(result)
-
+    @require("id")
+    @require("size")
     def resize(self):
+        self.action_result(self.do.droplet.resize(
+            self.module.params["id"], self.module.params["size"], self.module.params["disk"]
+        ))
 
-        result = None
-
-        if self.module.params["id"] is None:
-            self.module.fail_json(msg="the id parameter is required")
-
-        if self.module.params["size"] is None:
-            self.module.fail_json(msg="the size parameter is required")
-
-        result = None
-
-        if self.module.params["disk"] is None:
-            result = self.do.droplet.resize(self.module.params["id"], self.module.params["size"])
-        else:
-            result = self.do.droplet.resize(
-                self.module.params["id"], self.module.params["size"], self.module.params["disk"]
-            )
-
-        self.action_result(result)
-
+    @require("id")
+    @require("image")
     def rebuild(self):
+        self.action_result(self.do.droplet.rebuild(
+            self.module.params["id"], self.module.params["image"]
+        ))
 
-        result = None
-
-        if self.module.params["id"] is None:
-            self.module.fail_json(msg="the id parameter is required")
-
-        if self.module.params["image"] is None:
-            self.module.fail_json(msg="the image parameter is required")
-
-        result = self.do.droplet.rebuild(self.module.params["id"], self.module.params["image"])
-
-        self.action_result(result)
-
+    @require("id")
+    @require("name")
     def rename(self):
+        self.action_result(self.do.droplet.rename(
+            self.module.params["id"], self.module.params["name"]
+        ))
 
-        result = None
-
-        if self.module.params["id"] is None:
-            self.module.fail_json(msg="the id parameter is required")
-
-        if self.module.params["name"] is None:
-            self.module.fail_json(msg="the name parameter is required")
-
-        result = self.do.droplet.rename(self.module.params["id"], self.module.params["name"])
-
-        self.action_result(result)
-
+    @require("id")
+    @require("kernel")
     def kernel_update(self):
-
-        result = None
-
-        if self.module.params["id"] is None:
-            self.module.fail_json(msg="the id parameter is required")
-
-        if self.module.params["kernel"] is None:
-            self.module.fail_json(msg="the kernel parameter is required")
-
-        result = self.do.droplet.kernel_update(
+        self.action_result(self.do.droplet.kernel_update(
             self.module.params["id"], self.module.params["kernel"]
-        )
+        ))
 
-        self.action_result(result)
-
+    @require("id", "tag_name")
+    @require("snapshot_name")
     def snapshot_create(self):
+        self.action_result(self.do.droplet.snapshot_create(
+            id=self.module.params["id"],
+            tag_name=self.module.params["tag_name"],
+            snapshot_name=self.module.params["snapshot_name"]
+        ))
 
-        if self.module.params["name"] is None:
-            self.module.fail_json(msg="the name parameter is required")
-
-        if self.module.params["id"] is not None:
-
-            result = self.do.droplet.snapshot_create(
-                id=self.module.params["id"], name=self.module.params["name"]
-            )
-
-            self.action_result(result)
-
-        elif self.module.params["tag_name"] is not None:
-
-            result = self.do.droplet.snapshot_create(
-                tag_name=self.module.params["tag_name"], name=self.module.params["name"]
-            )
-
-            self.action_result(result)
-
-        else:
-
-            self.module.fail_json(msg="the id or tag_name parameter is required")
-
+    @require("id")
+    @require("action_id")
     def action_info(self):
-
-        result = None
-
-        if self.module.params["id"] is None:
-            self.module.fail_json(msg="the id parameter is required")
-
-        if self.module.params["action_id"] is None:
-            self.module.fail_json(msg="the action_id parameter is required")
-
-        result = self.do.droplet.action_info(
+        self.module.exit_json(changed=False, action=self.do.droplet.action_info(
             self.module.params["id"], self.module.params["action_id"]
-        )
-
-        if "action" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=False, action=result["action"])
+        ))
 
 
 Droplet()

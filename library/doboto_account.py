@@ -4,6 +4,7 @@
 import os
 from ansible.module_utils.basic import AnsibleModule
 from doboto.DO import DO
+from doboto.DOBOTOException import DOBOTOException
 
 """
 
@@ -75,12 +76,9 @@ class Account(object):
         ))
 
     def act(self):
-
-        result = self.do.account.info()
-
-        if "account" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=False, account=result['account'])
+        try:
+            self.module.exit_json(changed=False, account=self.do.account.info())
+        except DOBOTOException as exception:
+            self.module.fail_json(msg=exception.message, result=exception.result)
 
 Account()

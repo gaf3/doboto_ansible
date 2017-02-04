@@ -6,6 +6,7 @@ import time
 import copy
 from ansible.module_utils.basic import AnsibleModule
 from doboto.DO import DO
+from doboto.DOBOTOException import DOBOTOException
 
 """
 
@@ -81,6 +82,23 @@ EXAMPLES = '''
 '''
 
 
+def require(*required):
+    def requirer(function):
+        def wrapper(*args, **kwargs):
+            params = required
+            if not isinstance(params, tuple):
+                params = (params,)
+            met = False
+            for param in params:
+                if args[0].module.params[param] is not None:
+                    met = True
+            if not met:
+                args[0].module.fail_json(msg="the %s parameter is required" % " or ".join(params))
+            function(*args, **kwargs)
+        return wrapper
+    return requirer
+
+
 class FloatingIP(object):
 
     url = "https://api.digitalocean.com/v2"
@@ -126,172 +144,94 @@ class FloatingIP(object):
         ))
 
     def act(self):
-
-        getattr(self, self.module.params["action"])()
+        try:
+            getattr(self, self.module.params["action"])()
+        except DOBOTOException as exception:
+            self.module.fail_json(msg=exception.message, result=exception.result)
 
     def list(self):
+        self.module.exit_json(changed=False, floating_ips=self.do.floating_ip.list())
 
-        result = None
-
-        result = self.do.floating_ip.list()
-
-        if "floating_ips" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=False, floating_ips=result["floating_ips"])
-
+    @require("droplet_id", "region")
     def create(self):
 
-        result = None
+        floating_ip = self.do.floating_ip.create(
+            droplet_id=self.module.params["droplet_id"],
+            region=self.module.params["region"]
+        )
 
-        if self.module.params["droplet_id"] is not None:
+        start_time = time.time()
 
-            result = self.do.floating_ip.create(droplet_id=self.module.params["droplet_id"])
+        while self.module.params["wait"] and \
+              (self.module.params["droplet_id"] is None or floating_ip["droplet"]) is None and \
+              (self.module.params["region"] is None or floating_ip["region"] is None):
 
-            if "floating_ip" not in result:
-                self.module.fail_json(msg="DO API error", result=result)
+            time.sleep(self.module.params["poll"])
 
-            start_time = time.time()
+            try:
+                floating_ip = self.do.floating_ip.info(floating_ip["ip"])
+            except:
+                pass
 
-            while self.module.params["wait"] and result["floating_ip"]["droplet"] is None:
+            if time.time() - start_time > self.module.params["timeout"]:
+                self.module.fail_json(msg="Timeout on polling", floating_ip=floating_ip)
 
-                time.sleep(self.module.params["poll"])
-                latest = self.do.floating_ip.info(result["floating_ip"]["ip"])
-                if "floating_ip" in latest:
-                    result = latest
+        self.module.exit_json(changed=True, floating_ip=floating_ip)
 
-                if time.time() - start_time > self.module.params["timeout"]:
-                    self.module.fail_json(msg="Timeout on polling", result=result)
-
-            self.module.exit_json(changed=True, floating_ip=result['floating_ip'])
-
-        elif self.module.params["region"] is not None:
-
-            result = self.do.floating_ip.create(region=self.module.params["region"])
-
-            if "floating_ip" not in result:
-                self.module.fail_json(msg="DO API error", result=result)
-
-            start_time = time.time()
-
-            while self.module.params["wait"] and result["floating_ip"]["region"] is None:
-
-                time.sleep(self.module.params["poll"])
-                latest = self.do.floating_ip.info(result["floating_ip"]["ip"])
-                if "action" in latest:
-                    result = latest
-
-                if time.time() - start_time > self.module.params["timeout"]:
-                    self.module.fail_json(msg="Timeout on polling", action=result['action'])
-
-            self.module.exit_json(changed=True, floating_ip=result['floating_ip'])
-
-        else:
-            self.module.fail_json(msg="the dropelt_id or region parameter is required")
-
+    @require("ip")
     def info(self):
-
-        if self.module.params["ip"] is None:
-            self.module.fail_json(msg="the ip parameter is required")
-
-        result = self.do.floating_ip.info(self.module.params["ip"])
-
-        if "floating_ip" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=False, floating_ip=result["floating_ip"])
-
-    def destroy(self):
-
-        if self.module.params["ip"] is None:
-            self.module.fail_json(msg="the ip parameter is required")
-
-        result = self.do.floating_ip.destroy(self.module.params["ip"])
-
-        if "status" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=True, result=result)
-
-    def action_result(self, result):
-
-        if "action" in result:
-
-            action = result["action"]
-
-            start_time = time.time()
-
-            while self.module.params["wait"] and result["action"]["status"] == "in-progress":
-
-                time.sleep(self.module.params["poll"])
-                latest = self.do.action.info(action["id"])
-                if "action" in latest:
-                    result = latest
-
-                if time.time() - start_time > self.module.params["timeout"]:
-                    self.module.fail_json(msg="Timeout on polling", action=result['action'])
-
-            self.module.exit_json(changed=True, action=result["action"])
-
-        else:
-
-            self.module.fail_json(msg="DO API error", result=result)
-
-    def assign(self):
-
-        if self.module.params["ip"] is None:
-            self.module.fail_json(msg="the ip parameter is required")
-
-        if self.module.params["droplet_id"] is None:
-            self.module.fail_json(msg="the droplet_id parameter is required")
-
-        result = self.do.floating_ip.assign(
-            self.module.params["ip"], self.module.params["droplet_id"]
-        )
-
-        self.action_result(result)
-
-    def unassign(self):
-
-        if self.module.params["ip"] is None:
-            self.module.fail_json(msg="the ip parameter is required")
-
-        result = self.do.floating_ip.unassign(
+        self.module.exit_json(changed=False, floating_ip=self.do.floating_ip.info(
             self.module.params["ip"]
-        )
+        ))
 
-        self.action_result(result)
+    @require("ip")
+    def destroy(self):
+        self.module.exit_json(changed=True, result=self.do.floating_ip.destroy(
+            self.module.params["ip"]
+        ))
 
+    def action_result(self, action):
+
+        start_time = time.time()
+
+        while self.module.params["wait"] and action["status"] == "in-progress":
+
+            time.sleep(self.module.params["poll"])
+            try:
+                action = self.do.action.info(action["id"])
+            except:
+                pass
+
+            if time.time() - start_time > self.module.params["timeout"]:
+                self.module.fail_json(msg="Timeout on polling", action=result['action'])
+
+        self.module.exit_json(changed=True, action=action)
+
+    @require("ip")
+    @require("droplet_id")
+    def assign(self):
+        self.action_result(self.do.floating_ip.assign(
+            self.module.params["ip"], self.module.params["droplet_id"]
+        ))
+
+    @require("ip")
+    def unassign(self):
+        self.action_result(self.do.floating_ip.unassign(
+            self.module.params["ip"]
+        ))
+
+    @require("ip")
     def action_list(self):
+        self.module.exit_json(changed=False, actions=self.do.floating_ip.action_list(
+            self.module.params["ip"]
+        ))
 
-        if self.module.params["ip"] is None:
-            self.module.fail_json(msg="the id parameter is required")
-
-        result = self.do.floating_ip.action_list(self.module.params["ip"])
-
-        if "actions" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=False, actions=result["actions"])
-
+    @require("ip")
+    @require("action_id")
     def action_info(self):
-
-        result = None
-
-        if self.module.params["ip"] is None:
-            self.module.fail_json(msg="the id parameter is required")
-
-        if self.module.params["action_id"] is None:
-            self.module.fail_json(msg="the action_id parameter is required")
-
-        result = self.do.floating_ip.action_info(
+        self.module.exit_json(changed=False, action=self.do.floating_ip.action_info(
             self.module.params["ip"], self.module.params["action_id"]
-        )
-
-        if "action" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=False, action=result["action"])
+        ))
 
 
 FloatingIP()
