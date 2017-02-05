@@ -44,7 +44,7 @@ options:
         tag action
         choices:
             - list
-            - names
+            - name_list
             - create
             - present
             - info
@@ -121,7 +121,7 @@ class Tag(object):
         return AnsibleModule(argument_spec=dict(
             action=dict(default=None, required=True, choices=[
                 "list",
-                "names",
+                "name_list",
                 "create",
                 "present",
                 "info",
@@ -149,8 +149,8 @@ class Tag(object):
     def list(self):
         self.module.exit_json(changed=False, tags=self.do.tag.list())
 
-    def names(self):
-        self.module.exit_json(changed=False, names=self.do.tag.names())
+    def name_list(self):
+        self.module.exit_json(changed=False, names=self.do.tag.name_list())
 
     @require("name")
     def create(self):
