@@ -6,6 +6,7 @@ import time
 import copy
 from ansible.module_utils.basic import AnsibleModule
 from doboto.DO import DO
+from doboto.DOBOTOException import DOBOTOException
 
 """
 
@@ -88,6 +89,23 @@ EXAMPLES = '''
 '''
 
 
+def require(*required):
+    def requirer(function):
+        def wrapper(*args, **kwargs):
+            params = required
+            if not isinstance(params, tuple):
+                params = (params,)
+            met = False
+            for param in params:
+                if args[0].module.params[param] is not None:
+                    met = True
+            if not met:
+                args[0].module.fail_json(msg="the %s parameter is required" % " or ".join(params))
+            function(*args, **kwargs)
+        return wrapper
+    return requirer
+
+
 class Domain(object):
 
     url = "https://api.digitalocean.com/v2"
@@ -109,7 +127,6 @@ class Domain(object):
         self.act()
 
     def input(self):
-
         return AnsibleModule(argument_spec=dict(
             action=dict(default=None, required=True, choices=[
                 "list",
@@ -137,78 +154,42 @@ class Domain(object):
         ))
 
     def act(self):
-
-        getattr(self, self.module.params["action"])()
-
-    def create(self):
-
-        if self.module.params["name"] is None:
-            self.module.fail_json(msg="the name parameter is required")
-
-        if self.module.params["ip_address"] is None:
-            self.module.fail_json(msg="the ip_address parameter is required")
-
-        result = self.do.domain.create(
-            self.module.params["name"], self.module.params["ip_address"]
-        )
-
-        if "domain" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=True, domain=result['domain'])
+        try:
+            getattr(self, self.module.params["action"])()
+        except DOBOTOException as exception:
+            self.module.fail_json(msg=exception.message, result=exception.result)
 
     def list(self):
+        self.module.exit_json(changed=False, domains=self.do.domain.list())
 
-        result = None
+    @require("name")
+    @require("ip_address")
+    def create(self):
+        self.module.exit_json(changed=True, domain=self.do.domain.create(
+            self.module.params["name"], self.module.params["ip_address"]
+        ))
 
-        result = self.do.domain.list()
-
-        if "domains" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=False, domains=result["domains"])
-
+    @require("name")
     def info(self):
+        self.module.exit_json(changed=False, domain=self.do.domain.info(
+            self.module.params["name"])
+        )
 
-        if self.module.params["name"] is None:
-            self.module.fail_json(msg="the name parameter is required")
-
-        result = self.do.domain.info(self.module.params["name"])
-
-        if "domain" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=False, domain=result["domain"])
-
+    @require("name")
     def destroy(self):
+        self.module.exit_json(changed=True, result=self.do.domain.destroy(
+            self.module.params["name"])
+        )
 
-        if self.module.params["name"] is None:
-            self.module.fail_json(msg="the name parameter is required")
-
-        result = self.do.domain.destroy(self.module.params["name"])
-
-        if "status" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=True, result=result)
-
+    @require("name")
     def record_list(self):
+        self.module.exit_json(changed=False, domain_records=self.do.domain.record_list(
+            self.module.params["name"]
+        ))
 
-        if self.module.params["name"] is None:
-            self.module.fail_json(msg="the name parameter is required")
-
-        result = self.do.domain.record_list(self.module.params["name"])
-
-        if "domain_records" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=False, domain_records=result["domain_records"])
-
+    @require("name")
     def record_create(self):
 
-        if self.module.params["name"] is None:
-            self.module.fail_json(msg="the name parameter is required")
-
         attribs = {}
 
         for field in [
@@ -222,38 +203,21 @@ class Domain(object):
             if self.module.params["record_%s" % field] is not None:
                 attribs[field] = self.module.params["record_%s" % field]
 
-        result = self.do.domain.record_create(self.module.params["name"], attribs)
+        self.module.exit_json(changed=True, domain_record=self.do.domain.record_create(
+            self.module.params["name"], attribs
+        ))
 
-        if "domain_record" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=True, domain_record=result["domain_record"])
-
+    @require("name")
+    @require("record_id")
     def record_info(self):
-
-        if self.module.params["name"] is None:
-            self.module.fail_json(msg="the name parameter is required")
-
-        if self.module.params["record_id"] is None:
-            self.module.fail_json(msg="the record_id parameter is required")
-
-        result = self.do.domain.record_info(
+        self.module.exit_json(changed=False, domain_record=self.do.domain.record_info(
             self.module.params["name"], self.module.params["record_id"]
-        )
+        ))
 
-        if "domain_record" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=False, domain_record=result["domain_record"])
-
+    @require("name")
+    @require("record_id")
     def record_update(self):
 
-        if self.module.params["name"] is None:
-            self.module.fail_json(msg="the name parameter is required")
-
-        if self.module.params["record_id"] is None:
-            self.module.fail_json(msg="the record_id parameter is required")
-
         attribs = {}
 
         for field in [
@@ -267,31 +231,16 @@ class Domain(object):
             if self.module.params["record_%s" % field] is not None:
                 attribs[field] = self.module.params["record_%s" % field]
 
-        result = self.do.domain.record_update(
+        self.module.exit_json(changed=True, domain_record=self.do.domain.record_update(
             self.module.params["name"], self.module.params["record_id"], attribs
-        )
+        ))
 
-        if "domain_record" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=True, domain_record=result["domain_record"])
-
+    @require("name")
+    @require("record_id")
     def record_destroy(self):
-
-        if self.module.params["name"] is None:
-            self.module.fail_json(msg="the name parameter is required")
-
-        if self.module.params["record_id"] is None:
-            self.module.fail_json(msg="the record_id parameter is required")
-
-        result = self.do.domain.record_destroy(
+        self.module.exit_json(changed=True, result=self.do.domain.record_destroy(
             self.module.params["name"], self.module.params["record_id"]
-        )
-
-        if "status" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=True, result=result)
+        ))
 
 
 Domain()

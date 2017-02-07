@@ -6,6 +6,7 @@
 - name: account | info | token | verify
   assert:
     that:
+      - "{{ not account_info_token.changed }}"
       - "{{ account_info_token.account.uuid == 'b60c5d2212bf79e1a2bb0e3c1b2ae30a617fb796' }}"
     msg: "{{ account_info_token }}"
 
@@ -16,5 +17,6 @@
 - name: account | info | verify
   assert:
     that:
+      - "{{ not account_info.changed }}"
       - "{{ account_info.account.uuid == 'b60c5d2212bf79e1a2bb0e3c1b2ae30a617fb796' }}"
     msg: "{{ account_info }}"

@@ -6,6 +6,7 @@
 - name: size | list | verify
   assert:
     that:
+      - "{{ not size_list.changed }}"
       - "{{ size_list|json_query(size_slug_query) == 512 }}"
     msg: "{{ size_list }}"
   vars:

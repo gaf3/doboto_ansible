@@ -4,6 +4,7 @@
 import os
 from ansible.module_utils.basic import AnsibleModule
 from doboto.DO import DO
+from doboto.DOBOTOException import DOBOTOException
 
 """
 
@@ -68,6 +69,23 @@ EXAMPLES = '''
 '''
 
 
+def require(*required):
+    def requirer(function):
+        def wrapper(*args, **kwargs):
+            params = required
+            if not isinstance(params, tuple):
+                params = (params,)
+            met = False
+            for param in params:
+                if args[0].module.params[param] is not None:
+                    met = True
+            if not met:
+                args[0].module.fail_json(msg="the %s parameter is required" % " or ".join(params))
+            function(*args, **kwargs)
+        return wrapper
+    return requirer
+
+
 class SSHKey(object):
 
     url = "https://api.digitalocean.com/v2"
@@ -103,46 +121,24 @@ class SSHKey(object):
         ))
 
     def act(self):
-
-        getattr(self, self.module.params["action"])()
+        try:
+            getattr(self, self.module.params["action"])()
+        except DOBOTOException as exception:
+            self.module.fail_json(msg=exception.message, result=exception.result)
 
     def list(self):
+        self.module.exit_json(changed=False, ssh_keys=self.do.ssh_key.list())
 
-        result = self.do.ssh_key.list()
-
-        if "ssh_keys" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=False, ssh_keys=result["ssh_keys"])
-
+    @require("name")
+    @require("public_key")
     def create(self):
-
-        if self.module.params["name"] is None:
-            self.module.fail_json(msg="the name parameter is required")
-
-        if self.module.params["public_key"] is None:
-            self.module.fail_json(msg="the public_key parameter is required")
-
-        result = self.do.ssh_key.create(
+        self.module.exit_json(changed=True, ssh_key=self.do.ssh_key.create(
             self.module.params["name"], self.module.params["public_key"]
-        )
+        ))
 
-        if "ssh_key" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=True, ssh_key=result['ssh_key'])
-
+    @require("name")
     def present(self):
-
-        if self.module.params["name"] is None:
-            self.module.fail_json(msg="the name parameter is required")
-
-        result = self.do.ssh_key.list()
-
-        if "ssh_keys" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        ssh_keys = result["ssh_keys"]
+        ssh_keys = self.do.ssh_key.list()
 
         existing = None
         for ssh_key in ssh_keys:
@@ -155,58 +151,25 @@ class SSHKey(object):
         else:
             self.create()
 
+    @require("id", "fingerprint")
     def info(self):
+        self.module.exit_json(changed=False, ssh_key=self.do.ssh_key.info(
+            self.module.params["id"] or self.module.params["fingerprint"]
+        ))
 
-        result = None
-
-        if self.module.params["id"] is not None:
-            result = self.do.ssh_key.info(self.module.params["id"])
-        elif self.module.params["fingerprint"] is not None:
-            result = self.do.ssh_key.info(self.module.params["fingerprint"])
-        else:
-            self.module.fail_json(msg="the id or fingerprint parameter is required")
-
-        if "ssh_key" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=False, ssh_key=result["ssh_key"])
-
+    @require("id", "fingerprint")
+    @require("name")
     def update(self):
+        self.module.exit_json(changed=True, ssh_key=self.do.ssh_key.update(
+            self.module.params["id"] or self.module.params["fingerprint"],
+            self.module.params["name"]
+        ))
 
-        result = None
-
-        if self.module.params["name"] is None:
-            self.module.fail_json(msg="the name parameter is required")
-
-        if self.module.params["id"] is not None:
-            result = self.do.ssh_key.update(self.module.params["id"], self.module.params["name"])
-        elif self.module.params["fingerprint"] is not None:
-            result = self.do.ssh_key.update(
-                self.module.params["fingerprint"], self.module.params["name"]
-            )
-        else:
-            self.module.fail_json(msg="the id or fingerprint parameter is required")
-
-        if "ssh_key" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=True, ssh_key=result["ssh_key"])
-
+    @require("id", "fingerprint")
     def destroy(self):
-
-        result = None
-
-        if self.module.params["id"] is not None:
-            result = self.do.ssh_key.destroy(self.module.params["id"])
-        elif self.module.params["fingerprint"] is not None:
-            result = self.do.ssh_key.destroy(self.module.params["fingerprint"])
-        else:
-            self.module.fail_json(msg="the id or fingerprint parameter is required")
-
-        if "status" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=True, result=result)
+        self.module.exit_json(changed=True, result=self.do.ssh_key.destroy(
+            self.module.params["id"] or self.module.params["fingerprint"]
+        ))
 
 
 SSHKey()

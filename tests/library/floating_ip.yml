@@ -19,6 +19,7 @@
 - name: floating_ip | create | droplet | verify
   assert:
     that:
+      - "{{ floating_ip_create_droplet.changed }}"
       - "{{ floating_ip_create_droplet.floating_ip.droplet.id == floating_ip_droplet.droplet.id }}"
     msg: "{{ floating_ip_create_droplet }}"
 
@@ -32,6 +33,7 @@
 - name: floating_ip | create | region | verify
   assert:
     that:
+      - "{{ floating_ip_create_region.changed }}"
       - "{{ floating_ip_create_region.floating_ip.region.slug == 'nyc1' }}"
     msg: "{{ floating_ip_create_region }}"
 
@@ -43,6 +45,7 @@
 - name: floating_ip | list | verify
   assert:
     that:
+      - "{{ not floating_ip_list.changed }}"
       - "{{ floating_ip_list.floating_ips|length == 2 }}"
     msg: "{{ floating_ip_list }}"
 
@@ -55,6 +58,7 @@
 - name: floating_ip | info | verify
   assert:
     that:
+      - "{{ not floating_ip_info.changed }}"
       - "{{ floating_ip_info.floating_ip.ip == floating_ip_create_region.floating_ip.ip }}"
     msg: "{{ floating_ip_info }}"
 
@@ -79,6 +83,7 @@
 - name: floating_ip | assign | verify
   assert:
     that:
+      - "{{ floating_ip_assign.changed }}"
       - "{{ floating_ip_assign.action.type == 'assign_ip' }}"
       - "{{ floating_ip_assign.action.resource_type == 'floating_ip' }}"
     msg: "{{ floating_ip_assign }}"
@@ -90,9 +95,10 @@
     wait: true
   register: floating_ip_unassign
 
-- name: floating_ip | assign | verify
+- name: floating_ip | unassign | verify
   assert:
     that:
+      - "{{ floating_ip_unassign.changed }}"
       - "{{ floating_ip_unassign.action.type == 'unassign_ip' }}"
       - "{{ floating_ip_unassign.action.resource_type == 'floating_ip' }}"
     msg: "{{ floating_ip_unassign }}"
@@ -106,6 +112,7 @@
 - name: floating_ip | action | list | verify
   assert:
     that:
+      - "{{ not floating_ip_action_list.changed }}"
       - "{{ floating_ip_action_list|json_query(floating_ip_unassign_query) == floating_ip_unassign.action.id }}"
     msg: "{{ floating_ip_action_list }}"
   vars:
@@ -121,6 +128,7 @@
 - name: floating_ip | action | info | verify
   assert:
     that:
+      - "{{ not floating_ip_action_info.changed }}"
       - "{{ floating_ip_action_info.action.type == 'unassign_ip' }}"
       - "{{ floating_ip_action_info.action.resource_type == 'floating_ip' }}"
     msg: "{{ floating_ip_action_info }}"
@@ -134,5 +142,6 @@
 - name: floating_ip | destroy | verify
   assert:
     that:
-      - "{{ floating_ip_destroy.result.status == 204 }}"
+      - "{{ floating_ip_destroy.changed }}"
+      - "{{ floating_ip_destroy.result is none }}"
     msg: "{{ floating_ip_destroy }}"

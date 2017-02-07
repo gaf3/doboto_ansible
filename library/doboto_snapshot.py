@@ -6,6 +6,7 @@ import time
 import copy
 from ansible.module_utils.basic import AnsibleModule
 from doboto.DO import DO
+from doboto.DOBOTOException import DOBOTOException
 
 """
 
@@ -62,6 +63,23 @@ EXAMPLES = '''
 '''
 
 
+def require(*required):
+    def requirer(function):
+        def wrapper(*args, **kwargs):
+            params = required
+            if not isinstance(params, tuple):
+                params = (params,)
+            met = False
+            for param in params:
+                if args[0].module.params[param] is not None:
+                    met = True
+            if not met:
+                args[0].module.fail_json(msg="the %s parameter is required" % " or ".join(params))
+            function(*args, **kwargs)
+        return wrapper
+    return requirer
+
+
 class Snapshot(object):
 
     url = "https://api.digitalocean.com/v2"
@@ -97,43 +115,27 @@ class Snapshot(object):
         ))
 
     def act(self):
-
-        getattr(self, self.module.params["action"])()
+        try:
+            getattr(self, self.module.params["action"])()
+        except DOBOTOException as exception:
+            self.module.fail_json(msg=exception.message, result=exception.result)
 
     def list(self):
+        self.module.exit_json(changed=False, snapshots=self.do.snapshot.list(
+            resource_type=self.module.params["resource_type"]
+        ))
 
-        result = None
-
-        result = self.do.snapshot.list(resource_type=self.module.params["resource_type"])
-
-        if "snapshots" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=False, snapshots=result["snapshots"])
-
+    @require("id")
     def info(self):
+        self.module.exit_json(changed=False, snapshot=self.do.snapshot.info(
+            id=self.module.params["id"]
+        ))
 
-        if self.module.params["id"] is None:
-            self.module.fail_json(msg="the id parameter is required")
-
-        result = self.do.snapshot.info(id=self.module.params["id"])
-
-        if "snapshot" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=False, snapshot=result["snapshot"])
-
+    @require("id")
     def destroy(self):
-
-        if self.module.params["id"] is None:
-            self.module.fail_json(msg="the id parameter is required")
-
-        result = self.do.snapshot.destroy(id=self.module.params["id"])
-
-        if "status" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=True, result=result)
+        self.module.exit_json(changed=True, result=self.do.snapshot.destroy(
+            id=self.module.params["id"]
+        ))
 
 
 Snapshot()

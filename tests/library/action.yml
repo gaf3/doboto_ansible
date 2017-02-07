@@ -22,6 +22,7 @@
 - name: action | list | verify
   assert:
     that:
+      - "{{ not action_list.changed }}"
       - "{{ action_list|length > 0 }}"
     msg: "{{ action_list }}"
 
@@ -34,6 +35,7 @@
 - name: action | info | verify
   assert:
     that:
+      - "{{ not action_info.changed }}"
       - "{{ action_info.action.resource_type == 'droplet' }}"
       - "{{ action_info.action.resource_id == action_droplet_action_list.actions[0].resource_id }}"
     msg: "{{ action_info }}"

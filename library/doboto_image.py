@@ -6,6 +6,7 @@ import time
 import copy
 from ansible.module_utils.basic import AnsibleModule
 from doboto.DO import DO
+from doboto.DOBOTOException import DOBOTOException
 
 """
 
@@ -91,6 +92,23 @@ EXAMPLES = '''
 '''
 
 
+def require(*required):
+    def requirer(function):
+        def wrapper(*args, **kwargs):
+            params = required
+            if not isinstance(params, tuple):
+                params = (params,)
+            met = False
+            for param in params:
+                if args[0].module.params[param] is not None:
+                    met = True
+            if not met:
+                args[0].module.fail_json(msg="the %s parameter is required" % " or ".join(params))
+            function(*args, **kwargs)
+        return wrapper
+    return requirer
+
+
 class Image(object):
 
     url = "https://api.digitalocean.com/v2"
@@ -139,141 +157,76 @@ class Image(object):
         ))
 
     def act(self):
-
-        getattr(self, self.module.params["action"])()
+        try:
+            getattr(self, self.module.params["action"])()
+        except DOBOTOException as exception:
+            self.module.fail_json(msg=exception.message, result=exception.result)
 
     def list(self):
+        self.module.exit_json(changed=False, images=self.do.image.list(
+            type=self.module.params["type"],
+            private=('true' if self.module.params["private"] else 'false')
+        ))
 
-        result = None
-
-        if self.module.params["type"] is not None:
-            result = self.do.image.list(type=self.module.params["type"])
-        elif self.module.params["private"] is not None and self.module.params["private"]:
-            result = self.do.image.list(private="true")
-        else:
-            result = self.do.image.list()
-
-        if "images" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=False, images=result["images"])
-
+    @require("id", "slug")
     def info(self):
+        self.module.exit_json(changed=False, image=self.do.image.info(
+            self.module.params["id"] or self.module.params["slug"]
+        ))
 
-        result = None
-
-        if self.module.params["id"] is not None:
-            result = self.do.image.info(self.module.params["id"])
-        elif self.module.params["slug"] is not None:
-            result = self.do.image.info(self.module.params["slug"])
-        else:
-            self.module.fail_json(msg="the id or slug parameter is required")
-
-        if "image" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=False, image=result["image"])
-
+    @require("id")
+    @require("name")
     def update(self):
+        self.module.exit_json(changed=True, image=self.do.image.update(
+            self.module.params["id"], self.module.params["name"]
+        ))
 
-        if self.module.params["id"] is None:
-            self.module.fail_json(msg="the id parameter is required")
-
-        if self.module.params["name"] is None:
-            self.module.fail_json(msg="the name parameter is required")
-
-        result = self.do.image.update(self.module.params["id"], self.module.params["name"])
-
-        if "image" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=True, image=result["image"])
-
+    @require("id")
     def destroy(self):
+        self.module.exit_json(changed=True, result=self.do.image.destroy(
+            self.module.params["id"]
+        ))
 
-        if self.module.params["id"] is None:
-            self.module.fail_json(msg="the id parameter is required")
+    def action_result(self, action):
 
-        result = self.do.image.destroy(self.module.params["id"])
+        start_time = time.time()
 
-        if "status" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
+        while self.module.params["wait"] and action["status"] == "in-progress":
 
-        self.module.exit_json(changed=True, result=result)
+            time.sleep(self.module.params["poll"])
+            try:
+                action = self.do.action.info(action["id"])
+            except:
+                pass
 
-    def action_result(self, result):
+            if time.time() - start_time > self.module.params["timeout"]:
+                self.module.fail_json(msg="Timeout on polling", action=result['action'])
 
-        if "action" in result:
+        self.module.exit_json(changed=True, action=action)
 
-            action = result["action"]
-
-            start_time = time.time()
-
-            while self.module.params["wait"] and result["action"]["status"] == "in-progress":
-
-                time.sleep(self.module.params["poll"])
-                latest = self.do.action.info(action["id"])
-                if "action" in latest:
-                    result = latest
-
-                if time.time() - start_time > self.module.params["timeout"]:
-                    self.module.fail_json(msg="Timeout on polling", action=result['action'])
-
-            self.module.exit_json(changed=True, action=result["action"])
-
-        else:
-
-            self.module.fail_json(msg="DO API error", result=result)
-
+    @require("id")
     def convert(self):
+        self.action_result(self.do.image.convert(self.module.params["id"]))
 
-        if self.module.params["id"] is None:
-            self.module.fail_json(msg="the id parameter is required")
-
-        result = self.do.image.convert(self.module.params["id"])
-        self.action_result(result)
-
+    @require("id")
+    @require("region")
     def transfer(self):
+        self.action_result(self.do.image.transfer(
+            self.module.params["id"], self.module.params["region"]
+        ))
 
-        if self.module.params["id"] is None:
-            self.module.fail_json(msg="the id parameter is required")
-
-        if self.module.params["region"] is None:
-            self.module.fail_json(msg="the region parameter is required")
-
-        result = self.do.image.transfer(self.module.params["id"], self.module.params["region"])
-        self.action_result(result)
-
+    @require("id")
     def action_list(self):
+        self.module.exit_json(changed=False, actions=self.do.image.action_list(
+            self.module.params["id"]
+        ))
 
-        if self.module.params["id"] is None:
-            self.module.fail_json(msg="the id parameter is required")
-
-        result = self.do.image.action_list(self.module.params["id"])
-
-        if "actions" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=False, actions=result["actions"])
-
+    @require("id")
+    @require("action_id")
     def action_info(self):
-
-        result = None
-
-        if self.module.params["id"] is None:
-            self.module.fail_json(msg="the id parameter is required")
-
-        if self.module.params["action_id"] is None:
-            self.module.fail_json(msg="the action_id parameter is required")
-
-        result = self.do.image.action_info(
+        self.module.exit_json(changed=False, action=self.do.image.action_info(
             self.module.params["id"], self.module.params["action_id"]
-        )
-
-        if "action" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=False, action=result["action"])
+        ))
 
 
 Image()

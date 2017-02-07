@@ -8,6 +8,7 @@
 - name: tag | create | verify
   assert:
     that:
+      - "{{ tag_create.changed }}"
       - "{{ tag_create.tag.name == 'tag-create' }}"
     msg: "{{ tag_create }}"
 
@@ -20,6 +21,7 @@
 - name: tag | present | exists | verify
   assert:
     that:
+      - "{{ not tag_present_exists.changed }}"
       - "{{ tag_present_exists.tag.name == 'tag-create' }}"
     msg: "{{ tag_present_exists }}"
 
@@ -32,6 +34,7 @@
 - name: tag | present | new | verify
   assert:
     that:
+      - "{{ tag_present_new.changed }}"
       - "{{ tag_present_new.tag.name == 'tag-present' }}"
     msg: "{{ tag_present_new }}"
 
@@ -44,6 +47,7 @@
 - name: tag | info | verify
   assert:
     that:
+      - "{{ not tag_info.changed }}"
       - "{{ tag_info.tag == tag_create.tag }}"
     msg: "{{ tag_info }}"
 
@@ -55,28 +59,48 @@
 - name: tag | list | verify
   assert:
     that:
+      - "{{ not tag_list.changed }}"
       - "{{ tag_list|json_query(tag_create_query) == 'tag-create' }}"
     msg: "{{ tag_list }}"
   vars:
     tag_create_query: "tags[?name=='tag-create'].name | [0]"
+
+- name: tag | names
+  doboto_tag:
+    action: names
+  register: tag_names
+
+- name: tag | names | verify
+  assert:
+    that:
+      - "{{ not tag_names.changed }}"
+      - "{{ tag_names.names == ['tag-create', 'tag-present'] }}"
+    msg: "{{ tag_names }}"
 
 - name: tag | update
   doboto_tag:
     action: update
     name: tag-create
     new_name: tag-update
-
-- name: tag | update | reload
-  doboto_tag:
-    action: info
-    name: tag-update
   register: tag_update
 
 - name: tag | update | verify
   assert:
     that:
-      - "{{ tag_update.tag.name == 'tag-update' }}"
+      - "{{ tag_update.changed }}"
     msg: "{{ tag_update }}"
+
+- name: tag | update | reload
+  doboto_tag:
+    action: info
+    name: tag-update
+  register: tag_update_reload
+
+- name: tag | update | reload | verify
+  assert:
+    that:
+      - "{{ tag_update_reload.tag.name == 'tag-update' }}"
+    msg: "{{ tag_update_reload }}"
 
 - name: tag | attach | create
   doboto_droplet:
@@ -97,18 +121,25 @@
     name: tag-update
     resource_type: "droplet"
     resource_id: "{{ tag_droplet.droplets[0].id }}"
+  register: tag_attach
+
+- name: tag | attach | verify
+  assert:
+    that:
+      - "{{ tag_attach.changed }}"
+    msg: "{{ tag_attach }}"
 
 - name: tag | attach | reload
   doboto_droplet:
     action: info
     id: "{{ tag_droplet.droplets[0].id }}"
-  register: droplet_attach
+  register: tag_droplet_attach_reload
 
-- name: tag | attach | verify
+- name: tag | attach | | reload | verify
   assert:
     that:
-      - "{{ droplet_attach.droplet.tags == ['tag-update'] }}"
-    msg: "{{ droplet_attach }}"
+      - "{{ tag_droplet_attach_reload.droplet.tags == ['tag-update'] }}"
+    msg: "{{ tag_droplet_attach_reload }}"
 
 - name: tag | attach | new | droplet
   doboto_tag:
@@ -126,13 +157,13 @@
   doboto_droplet:
     action: info
     id: "{{ tag_droplet.droplets[0].id }}"
-  register: droplet_attach_new
+  register: tag_droplet_attach_new_reload
 
-- name: tag | attach | new | verify
+- name: tag | attach | new | reload | verify
   assert:
     that:
-      - "{{ droplet_attach_new.droplet.tags|sort == ['tag-new', 'tag-update'] }}"
-    msg: "{{ droplet_attach_new }}"
+      - "{{ tag_droplet_attach_new_reload.droplet.tags|sort == ['tag-new', 'tag-update'] }}"
+    msg: "{{ tag_droplet_attach_new_reload }}"
 
 - name: tag | attach | multiple | droplet
   doboto_tag:
@@ -150,13 +181,13 @@
   doboto_droplet:
     action: list
     tag_name: tag-multi
-  register: droplet_attach_multi
+  register: tag_droplet_attach_multi_reload
 
-- name: tag | attach | multiple | verify
+- name: tag | attach | multiple | reload | verify
   assert:
     that:
-      - "{{ droplet_attach_multi.droplets|length == 3 }}"
-    msg: "{{ droplet_attach_multi }}"
+      - "{{ tag_droplet_attach_multi_reload.droplets|length == 3 }}"
+    msg: "{{ tag_droplet_attach_multi_reload }}"
 
 - name: tag | detach | droplet
   doboto_tag:
@@ -164,20 +195,27 @@
     name: tag-update
     resource_type: "droplet"
     resource_id: "{{ tag_droplet.droplets[0].id }}"
+  register: tag_droplet_detach
+
+- name: tag | detach | verify
+  assert:
+    that:
+      - "{{ tag_droplet_detach.changed }}"
+    msg: "{{ tag_droplet_detach }}"
 
 - name: tag | detach | reload
   doboto_droplet:
     action: info
     id: "{{ tag_droplet.droplets[0].id }}"
-  register: droplet_detach
+  register: tag_droplet_detach_reload
 
-- name: tag | detach | verify
+- name: tag | detach | reload | verify
   assert:
     that:
-      - "{{ droplet_detach.droplet.tags|sort == ['tag-multi', 'tag-new'] }}"
-    msg: "{{ droplet_detach }}"
+      - "{{ tag_droplet_detach_reload.droplet.tags|sort == ['tag-multi', 'tag-new'] }}"
+    msg: "{{ tag_droplet_detach_reload }}"
 
-- name: tag | detach | droplet | resources
+- name: tag | detach | droplet | new | resources
   doboto_tag:
     action: detach
     name: tag-new
@@ -186,17 +224,17 @@
         resource_type: "droplet"
         resource_id: "{{ tag_droplet.droplets[0].id }}"
 
-- name: tag | detach | reload | resources
+- name: tag | detach | new | resources
   doboto_droplet:
     action: info
     id: "{{ tag_droplet.droplets[0].id }}"
-  register: droplet_detach
+  register: droplet_detach_new_resources
 
-- name: tag | detach | verify | resources
+- name: tag | detach | new | resources | verify
   assert:
     that:
-      - "{{ droplet_detach.droplet.tags == ['tag-multi'] }}"
-    msg: "{{ droplet_detach }}"
+      - "{{ droplet_detach_new_resources.droplet.tags == ['tag-multi'] }}"
+    msg: "{{ droplet_detach_new_resources }}"
 
 - name: tag | destroy
   doboto_tag:
@@ -207,5 +245,6 @@
 - name: tag | destroy | verify
   assert:
     that:
-      - "{{ tag_destroy.result.status == 204 }}"
+      - "{{ tag_destroy.changed }}"
+      - "{{ tag_destroy.result is none }}"
     msg: "{{ tag_destroy }}"

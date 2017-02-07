@@ -9,6 +9,7 @@
 - name: domain | create  | verify
   assert:
     that:
+      - "{{ domain_create.changed }}"
       - "{{ domain_create.domain.name == 'domain.create.com' }}"
     msg: "{{ domain_create }}"
 
@@ -20,6 +21,7 @@
 - name: domain | list | verify
   assert:
     that:
+      - "{{ not domain_list.changed }}"
       - "{{ domain_list.domains[0].name == domain_create.domain.name }}"
     msg: "{{ domain_list }}"
 
@@ -32,6 +34,7 @@
 - name: domain | info | verify
   assert:
     that:
+      - "{{ not domain_info.changed }}"
       - "{{ domain_info.domain.name == domain_create.domain.name }}"
     msg: "{{ domain_info }}"
 
@@ -44,6 +47,7 @@
 - name: domain | record | list | verify
   assert:
     that:
+      - "{{ not domain_record_list.changed }}"
       - "{{ domain_record_list|json_query(records_A_query) == '1.2.3.4' }}"
     msg: "{{ domain_record_list }}"
   vars:
@@ -61,6 +65,7 @@
 - name: domain | record | create  | verify
   assert:
     that:
+      - "{{ domain_record_create.changed }}"
       - "{{ domain_record_create.domain_record.type == 'CNAME' }}"
       - "{{ domain_record_create.domain_record.name == 'www.domain.create.com' }}"
       - "{{ domain_record_create.domain_record.data == '@' }}"
@@ -76,6 +81,7 @@
 - name: domain | record | info | verify
   assert:
     that:
+      - "{{ not domain_record_info.changed }}"
       - "{{ domain_record_info.domain_record.type == 'CNAME' }}"
       - "{{ domain_record_info.domain_record.name == 'www.domain.create.com' }}"
       - "{{ domain_record_info.domain_record.data == '@' }}"
@@ -93,6 +99,7 @@
 - name: domain | update  | verify
   assert:
     that:
+      - "{{ domain_record_update.changed }}"
       - "{{ domain_record_update.domain_record.type == 'CNAME' }}"
       - "{{ domain_record_update.domain_record.name == 'w2.domain.create.com' }}"
       - "{{ domain_record_update.domain_record.data == '@' }}"
@@ -108,7 +115,8 @@
 - name: domain | record | destroy | verify
   assert:
     that:
-      - "{{ domain_record_destroy.result.status == 204 }}"
+      - "{{ domain_record_destroy.changed }}"
+      - "{{ domain_record_destroy.result is none }}"
     msg: "{{ domain_record_destroy }}"
 
 - name: domain | destroy
@@ -120,5 +128,6 @@
 - name: domain | destroy | verify
   assert:
     that:
-      - "{{ domain_destroy.result.status == 204 }}"
+      - "{{ domain_destroy.changed }}"
+      - "{{ domain_destroy.result is none }}"
     msg: "{{ domain_destroy }}"

@@ -4,6 +4,7 @@
 import os
 from ansible.module_utils.basic import AnsibleModule
 from doboto.DO import DO
+from doboto.DOBOTOException import DOBOTOException
 
 """
 
@@ -55,6 +56,23 @@ EXAMPLES = '''
 '''
 
 
+def require(*required):
+    def requirer(function):
+        def wrapper(*args, **kwargs):
+            params = required
+            if not isinstance(params, tuple):
+                params = (params,)
+            met = False
+            for param in params:
+                if args[0].module.params[param] is not None:
+                    met = True
+            if not met:
+                args[0].module.fail_json(msg="the %s parameter is required" % " or ".join(params))
+            function(*args, **kwargs)
+        return wrapper
+    return requirer
+
+
 class Action(object):
 
     url = "https://api.digitalocean.com/v2"
@@ -76,7 +94,6 @@ class Action(object):
         self.act()
 
     def input(self):
-
         return AnsibleModule(argument_spec=dict(
             action=dict(default=None, required=True, choices=[
                 "list", "info"
@@ -87,31 +104,19 @@ class Action(object):
         ))
 
     def act(self):
-
-        getattr(self, self.module.params["action"])()
+        try:
+            getattr(self, self.module.params["action"])()
+        except DOBOTOException as exception:
+            self.module.fail_json(msg=exception.message, result=exception.result)
 
     def list(self):
+        self.module.exit_json(changed=False, actions=self.do.action.list())
 
-        result = self.do.action.list()
-
-        if "actions" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=False, actions=result["actions"])
-
+    @require("id")
     def info(self):
-
-        result = None
-
-        if self.module.params["id"] is None:
-            self.module.fail_json(msg="the id parameter is required")
-
-        result = self.do.action.info(self.module.params["id"])
-
-        if "action" not in result:
-            self.module.fail_json(msg="DO API error", result=result)
-
-        self.module.exit_json(changed=False, action=result["action"])
+        self.module.exit_json(changed=False, action=self.do.action.info(
+            self.module.params["id"]
+        ))
 
 
 Action()
