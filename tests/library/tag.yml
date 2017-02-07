@@ -65,17 +65,17 @@
   vars:
     tag_create_query: "tags[?name=='tag-create'].name | [0]"
 
-- name: tag | names
+- name: tag | name_list
   doboto_tag:
-    action: names
-  register: tag_names
+    action: name_list
+  register: tag_name_list
 
-- name: tag | names | verify
+- name: tag | name_list | verify
   assert:
     that:
-      - "{{ not tag_names.changed }}"
-      - "{{ tag_names.names == ['tag-create', 'tag-present'] }}"
-    msg: "{{ tag_names }}"
+      - "{{ not tag_name_list.changed }}"
+      - "{{ tag_name_list.names == ['tag-create', 'tag-present'] }}"
+    msg: "{{ tag_name_list }}"
 
 - name: tag | update
   doboto_tag:
