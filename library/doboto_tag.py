@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+import copy
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.doboto_module import require, DOBOTOModule
 
