@@ -44,3 +44,6 @@
         - markupsafe
         - ansible
         - jmespath
+
+    - name: Install DOBOTO Ansible
+      command: chdir=/home/vagrant/doboto_ansible python setup.py install
