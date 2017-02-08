@@ -1,15 +1,11 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import os
 import time
-import copy
 from ansible.module_utils.basic import AnsibleModule
-from doboto.DO import DO
-from doboto.DOBOTOException import DOBOTOException
+from ansible.module_utils.doboto_module import require, DOBOTOModule
 
 """
-
 Ansible module to manage DigitalOcean volumes
 (c) 2017, SWE Data <swe-data@do.co>
 
@@ -101,42 +97,7 @@ EXAMPLES = '''
 '''
 
 
-def require(*required):
-    def requirer(function):
-        def wrapper(*args, **kwargs):
-            params = required
-            if not isinstance(params, tuple):
-                params = (params,)
-            met = False
-            for param in params:
-                if args[0].module.params[param] is not None:
-                    met = True
-            if not met:
-                args[0].module.fail_json(msg="the %s parameter is required" % " or ".join(params))
-            function(*args, **kwargs)
-        return wrapper
-    return requirer
-
-
-class Volume(object):
-
-    url = "https://api.digitalocean.com/v2"
-
-    def __init__(self):
-
-        self.module = self.input()
-
-        token = self.module.params["token"]
-
-        if token is None:
-            token = os.environ.get('DO_API_TOKEN', None)
-
-        if token is None:
-            self.module.fail_json(msg="the token parameter is required")
-
-        self.do = DO(url=self.module.params["url"], token=token)
-
-        self.act()
+class Volume(DOBOTOModule):
 
     def input(self):
 
@@ -169,12 +130,6 @@ class Volume(object):
             action_id=dict(default=None),
             url=dict(default=self.url)
         ))
-
-    def act(self):
-        try:
-            getattr(self, self.module.params["action"])()
-        except DOBOTOException as exception:
-            self.module.fail_json(msg=exception.message, result=exception.result)
 
     def list(self):
         self.module.exit_json(changed=False, volumes=self.do.volume.list(
@@ -265,23 +220,6 @@ class Volume(object):
         self.module.exit_json(changed=True, snapshot=self.do.volume.snapshot_create(
             id=self.module.params["id"], snapshot_name=self.module.params["snapshot_name"]
         ))
-
-    def action_result(self, action):
-
-        start_time = time.time()
-
-        while self.module.params["wait"] and action["status"] == "in-progress":
-
-            time.sleep(self.module.params["poll"])
-            try:
-                action = self.do.action.info(action["id"])
-            except:
-                pass
-
-            if time.time() - start_time > self.module.params["timeout"]:
-                self.module.fail_json(msg="Timeout on polling", action=result['action'])
-
-        self.module.exit_json(changed=True, action=action)
 
     @require("id", "name")
     @require("droplet_id")

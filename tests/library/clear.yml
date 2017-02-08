@@ -1,5 +1,6 @@
 - name: clear| account | info
   doboto_account:
+    action: info
   register: account_info
 
 - name: cleare| account | verify

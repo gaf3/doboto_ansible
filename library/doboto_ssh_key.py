@@ -1,13 +1,10 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import os
 from ansible.module_utils.basic import AnsibleModule
-from doboto.DO import DO
-from doboto.DOBOTOException import DOBOTOException
+from ansible.module_utils.doboto_module import require, DOBOTOModule
 
 """
-
 Ansible module to manage DigitalOcean ssh keys
 (c) 2017, SWE Data <swe-data@do.co>
 
@@ -69,42 +66,7 @@ EXAMPLES = '''
 '''
 
 
-def require(*required):
-    def requirer(function):
-        def wrapper(*args, **kwargs):
-            params = required
-            if not isinstance(params, tuple):
-                params = (params,)
-            met = False
-            for param in params:
-                if args[0].module.params[param] is not None:
-                    met = True
-            if not met:
-                args[0].module.fail_json(msg="the %s parameter is required" % " or ".join(params))
-            function(*args, **kwargs)
-        return wrapper
-    return requirer
-
-
-class SSHKey(object):
-
-    url = "https://api.digitalocean.com/v2"
-
-    def __init__(self):
-
-        self.module = self.input()
-
-        token = self.module.params["token"]
-
-        if token is None:
-            token = os.environ.get('DO_API_TOKEN', None)
-
-        if token is None:
-            self.module.fail_json(msg="the token parameter is required")
-
-        self.do = DO(url=self.module.params["url"], token=token)
-
-        self.act()
+class SSHKey(DOBOTOModule):
 
     def input(self):
 
@@ -119,12 +81,6 @@ class SSHKey(object):
             name=dict(default=None),
             url=dict(default=self.url),
         ))
-
-    def act(self):
-        try:
-            getattr(self, self.module.params["action"])()
-        except DOBOTOException as exception:
-            self.module.fail_json(msg=exception.message, result=exception.result)
 
     def list(self):
         self.module.exit_json(changed=False, ssh_keys=self.do.ssh_key.list())

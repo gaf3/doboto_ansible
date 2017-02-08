@@ -1,5 +1,6 @@
 - name: account | info | token
   doboto_account:
+    action: info
     token: "{{ lookup('env','DO_API_TOKEN') }}"
   register: account_info_token
 
@@ -12,6 +13,7 @@
 
 - name: account | info
   doboto_account:
+    action: info
   register: account_info
 
 - name: account | info | verify
