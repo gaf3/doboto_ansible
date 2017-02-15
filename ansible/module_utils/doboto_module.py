@@ -47,6 +47,7 @@ def require(*required):
 class DOBOTOModule(object):
 
     url = "https://api.digitalocean.com/v2"
+    agent = "DOBOTO Ansible"
 
     def __init__(self):
 
@@ -60,7 +61,7 @@ class DOBOTOModule(object):
         if token is None:
             self.module.fail_json(msg="the token parameter is required")
 
-        self.do = DO(url=self.module.params["url"], token=token)
+        self.do = DO(token=token, url=self.module.params["url"], agent=self.agent)
 
         self.act()
 
