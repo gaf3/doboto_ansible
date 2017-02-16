@@ -25,6 +25,36 @@
       - "{{ domain_list.domains[0].name == domain_create.domain.name }}"
     msg: "{{ domain_list }}"
 
+- name: domain | present | exists
+  doboto_domain:
+    action: present
+    name: domain.create.com
+    ip_address: "1.2.3.4"
+  register: domain_present_exists
+
+- name: domain | present | exists  | verify
+  assert:
+    that:
+      - "{{ not domain_present_exists.changed }}"
+      - "{{ domain_present_exists.domain.name == 'domain.create.com' }}"
+      - "{{ domain_present_exists.created is none }}"
+    msg: "{{ domain_present_exists }}"
+
+- name: domain | present | new
+  doboto_domain:
+    action: present
+    name: domain.present.com
+    ip_address: "2.3.4.5"
+  register: domain_present_new
+
+- name: domain | present | new | verify
+  assert:
+    that:
+      - "{{ domain_present_new.changed }}"
+      - "{{ domain_present_new.domain.name == 'domain.present.com' }}"
+      - "{{ domain_present_new.created.name == 'domain.present.com' }}"
+    msg: "{{ domain_present_new }}"
+
 - name: domain | info
   doboto_domain:
     action: info

@@ -14,6 +14,9 @@ setup(
     long_description="BOTO-like Ansible modules for interacting with the Digital Ocean API",
     author="Digital Ocean Data Team",
     author_email="swe-data@do.co",
+    install_requires=[
+        "doboto>=0.4.0"
+    ],
     classifiers=[
         'Programming Language :: Python :: 2'
         'Programming Language :: Python :: 2.7'

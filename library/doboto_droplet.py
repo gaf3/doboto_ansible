@@ -267,41 +267,11 @@ class Droplet(DOBOTOModule):
             )}
         )
 
-    def ready(self, droplet, existing):
-
-        for exist in existing:
-            if droplet["id"] == exist["id"]:
-                return True
-
-        if droplet["status"] == "new":
-            return False
-
-        if self.module.params["private_networking"]:
-            found = False
-            for v4 in droplet["networks"]["v4"]:
-                if v4["type"] == "private":
-                    found = True
-            if not found:
-                return False
-
-        if self.module.params["ipv6"] and not droplet["networks"]["v6"]:
-            return False
-
-        if self.module.params["tags"] and len(self.module.params["tags"]) != len(droplet["tags"]):
-            return False
-
-        return True
-
     @require("name", "names")
     @require("region")
     @require("size")
     @require("image")
-    def create(self, existing=None):
-
-        if existing is None:
-            existing = []
-
-        existing_names = {droplet["name"]: True for droplet in existing}
+    def create(self):
 
         attribs = {
             "region": self.module.params["region"],
@@ -321,89 +291,67 @@ class Droplet(DOBOTOModule):
         if self.module.params["name"] is not None:
 
             attribs["name"] = self.module.params["name"]
-
-            droplet = self.do.droplet.create(attribs)
-
-            start_time = time.time()
-
-            while self.module.params["wait"] and not self.ready(droplet, existing):
-
-                time.sleep(self.module.params["poll"])
-                try:
-                    droplet = self.do.droplet.info(droplet["id"])
-                except:
-                    pass
-
-                if time.time() - start_time > self.module.params["timeout"]:
-                    self.module.fail_json(msg="Timeout on polling", droplet=droplet)
-
+            droplet = self.do.droplet.create(
+                attribs,
+                self.module.params["wait"],
+                self.module.params["poll"],
+                self.module.params["timeout"]
+            )
             self.module.exit_json(changed=True, droplet=droplet)
 
         elif self.module.params["names"] is not None:
 
-            attribs["names"] = []
-            for name in self.module.params["names"]:
-                if name not in existing_names:
-                    attribs["names"].append(name)
-
-            droplets = copy.deepcopy(existing)
-            droplets.extend(self.do.droplet.create(attribs))
-
-            start_time = time.time()
-
-            while self.module.params["wait"] and \
-                    len([1 for droplet in droplets if not self.ready(droplet, existing)]) > 0:
-
-                time.sleep(self.module.params["poll"])
-
-                for index, droplet in enumerate(droplets):
-                    if not self.ready(droplet, existing):
-                        try:
-                            droplets[index] = self.do.droplet.info(droplet["id"])
-                        except:
-                            pass
-
-                if time.time() - start_time > self.module.params["timeout"]:
-                    self.module.fail_json(msg="Timeout on polling", droplets=droplets)
-
-            if not existing:
-                self.module.exit_json(changed=True, droplets=droplets)
-            else:
-                created = [droplet for droplet in droplets if droplet["name"] not in existing_names]
-                self.module.exit_json(changed=True, droplets=droplets, created=created)
+            attribs["names"] = self.module.params["names"]
+            droplets = self.do.droplet.create(
+                attribs,
+                self.module.params["wait"],
+                self.module.params["poll"],
+                self.module.params["timeout"]
+            )
+            self.module.exit_json(changed=True, droplets=droplets)
 
     @require("name", "names")
+    @require("region")
+    @require("size")
+    @require("image")
     def present(self):
 
-        droplets = self.do.droplet.list()
+        attribs = {
+            "region": self.module.params["region"],
+            "size": self.module.params["size"],
+            "image": self.module.params["image"],
+        }
+
+        for optional in [
+            'ssh_keys', 'volume', 'tags', 'backups', 'ipv6',
+            'private_networking', 'user_data', 'monitoring'
+        ]:
+            attribs[optional] = self.module.params[optional]
+
+        if self.module.params['extra'] is not None:
+            attribs.update(self.module.params['extra'])
 
         if self.module.params["name"] is not None:
 
-            existing = None
-            for droplet in droplets:
-                if self.module.params["name"] == droplet["name"]:
-                    existing = droplet
-                    break
+            attribs["name"] = self.module.params["name"]
+            (droplet, created) = self.do.droplet.present(
+                attribs,
+                wait=self.module.params["wait"],
+                poll=self.module.params["poll"],
+                timeout=self.module.params["timeout"]
+            )
+            self.module.exit_json(changed=(created is not None), droplet=droplet, created=created)
 
-            if existing is not None:
-                self.module.exit_json(changed=False, droplet=existing)
-            else:
-                self.create()
+        elif self.module.params["names"] is not None:
 
-        else:
-
-            existing = []
-
-            for name in self.module.params["names"]:
-                for droplet in droplets:
-                    if name == droplet["name"]:
-                        existing.append(droplet)
-                        break
-
-            if len(existing) == len(self.module.params["names"]):
-                self.module.exit_json(changed=False, droplets=existing)
-            else:
-                self.create(existing)
+            attribs["names"] = self.module.params["names"]
+            (droplets, created) = self.do.droplet.present(
+                attribs,
+                wait=self.module.params["wait"],
+                poll=self.module.params["poll"],
+                timeout=self.module.params["timeout"]
+            )
+            self.module.exit_json(changed=(len(created) > 0), droplets=droplets, created=created)
 
     @require("id")
     def info(self):
@@ -421,21 +369,27 @@ class Droplet(DOBOTOModule):
 
         if self.module.params["id"] is not None:
 
-            result = getattr(
+            self.module.exit_json(changed=True, action=getattr(
                 self.do.droplet,
                 self.module.params["action"]
-            )(id=self.module.params["id"])
-
-            self.action_result(result)
+            )(
+                id=self.module.params["id"],
+                wait=self.module.params["wait"],
+                poll=self.module.params["poll"],
+                timeout=self.module.params["timeout"]
+            ))
 
         elif not tagless and self.module.params["tag_name"] is not None:
 
-            result = getattr(
+            self.module.exit_json(changed=True, actions=getattr(
                 self.do.droplet,
                 self.module.params["action"]
-            )(tag_name=self.module.params["tag_name"])
-
-            self.actions_result(result)
+            )(
+                tag_name=self.module.params["tag_name"],
+                wait=self.module.params["wait"],
+                poll=self.module.params["poll"],
+                timeout=self.module.params["timeout"]
+            ))
 
         else:
 
@@ -444,45 +398,63 @@ class Droplet(DOBOTOModule):
     @require("id")
     @require("image")
     def restore(self):
-        self.action_result(self.do.droplet.restore(
-            self.module.params["id"], self.module.params["image"]
+        self.module.exit_json(changed=True, action=self.do.droplet.restore(
+            self.module.params["id"], self.module.params["image"],
+            wait=self.module.params["wait"],
+            poll=self.module.params["poll"],
+            timeout=self.module.params["timeout"]
         ))
 
     @require("id")
     @require("size")
     def resize(self):
-        self.action_result(self.do.droplet.resize(
-            self.module.params["id"], self.module.params["size"], self.module.params["disk"]
+        self.module.exit_json(changed=True, action=self.do.droplet.resize(
+            self.module.params["id"], self.module.params["size"], self.module.params["disk"],
+            wait=self.module.params["wait"],
+            poll=self.module.params["poll"],
+            timeout=self.module.params["timeout"]
         ))
 
     @require("id")
     @require("image")
     def rebuild(self):
-        self.action_result(self.do.droplet.rebuild(
-            self.module.params["id"], self.module.params["image"]
+        self.module.exit_json(changed=True, action=self.do.droplet.rebuild(
+            self.module.params["id"], self.module.params["image"],
+            wait=self.module.params["wait"],
+            poll=self.module.params["poll"],
+            timeout=self.module.params["timeout"]
         ))
 
     @require("id")
     @require("name")
     def rename(self):
-        self.action_result(self.do.droplet.rename(
-            self.module.params["id"], self.module.params["name"]
+        self.module.exit_json(changed=True, action=self.do.droplet.rename(
+            self.module.params["id"], self.module.params["name"],
+            wait=self.module.params["wait"],
+            poll=self.module.params["poll"],
+            timeout=self.module.params["timeout"]
         ))
 
     @require("id")
     @require("kernel")
     def kernel_update(self):
-        self.action_result(self.do.droplet.kernel_update(
-            self.module.params["id"], self.module.params["kernel"]
+        self.module.exit_json(changed=True, action=self.do.droplet.kernel_update(
+            self.module.params["id"], self.module.params["kernel"],
+            wait=self.module.params["wait"],
+            poll=self.module.params["poll"],
+            timeout=self.module.params["timeout"]
         ))
 
     @require("id", "tag_name")
     @require("snapshot_name")
     def snapshot_create(self):
-        self.action_result(self.do.droplet.snapshot_create(
+        self.module.exit_json(changed=True, action=self.do.droplet.snapshot_create(
             id=self.module.params["id"],
             tag_name=self.module.params["tag_name"],
-            snapshot_name=self.module.params["snapshot_name"]
+            snapshot_name=self.module.params["snapshot_name"],
+            wait=self.module.params["wait"],
+            poll=self.module.params["poll"],
+            timeout=self.module.params["timeout"]
         ))
 
     @require("id")

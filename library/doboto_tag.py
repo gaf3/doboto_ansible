@@ -114,18 +114,8 @@ class Tag(DOBOTOModule):
 
     @require("name")
     def present(self):
-        tags = self.do.tag.list()
-
-        existing = None
-        for tag in tags:
-            if self.module.params["name"] == tag["name"]:
-                existing = tag
-                break
-
-        if existing is not None:
-            self.module.exit_json(changed=False, tag=existing)
-        else:
-            self.create()
+        (tag, created) = self.do.tag.present(self.module.params["name"])
+        self.module.exit_json(changed=(created is not None), tag=tag, created=created)
 
     @require("name")
     def info(self):

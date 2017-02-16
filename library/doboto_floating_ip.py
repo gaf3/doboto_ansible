@@ -148,14 +148,20 @@ class FloatingIP(DOBOTOModule):
     @require("ip")
     @require("droplet_id")
     def assign(self):
-        self.action_result(self.do.floating_ip.assign(
-            self.module.params["ip"], self.module.params["droplet_id"]
+        self.module.exit_json(changed=True, action=self.do.floating_ip.assign(
+            self.module.params["ip"], self.module.params["droplet_id"],
+            wait=self.module.params["wait"],
+            poll=self.module.params["poll"],
+            timeout=self.module.params["timeout"]
         ))
 
     @require("ip")
     def unassign(self):
-        self.action_result(self.do.floating_ip.unassign(
-            self.module.params["ip"]
+        self.module.exit_json(changed=True, action=self.do.floating_ip.unassign(
+            self.module.params["ip"],
+            wait=self.module.params["wait"],
+            poll=self.module.params["poll"],
+            timeout=self.module.params["timeout"]
         ))
 
     @require("ip")

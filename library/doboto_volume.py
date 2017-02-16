@@ -42,6 +42,7 @@ options:
         choices:
             - list
             - create
+            - present
             - info
             - destroy
             - snapshot_list
@@ -105,6 +106,7 @@ class Volume(DOBOTOModule):
             action=dict(default=None, required=True, choices=[
                 "list",
                 "create",
+                "present",
                 "info",
                 "destroy",
                 "snapshot_list",
@@ -150,25 +152,34 @@ class Volume(DOBOTOModule):
             if self.module.params[param] is not None:
                 attribs[param] = self.module.params[param]
 
-        volume = self.do.volume.create(attribs)
-        start_time = time.time()
+        self.module.exit_json(changed=True, volume=self.do.volume.create(
+            attribs,
+            wait=self.module.params["wait"],
+            poll=self.module.params["poll"],
+            timeout=self.module.params["timeout"]
+        ))
 
-        while self.module.params["wait"]:
+    @require("name")
+    @require("size_gigabytes")
+    @require("region", "snapshot_id")
+    def present(self):
 
-            time.sleep(self.module.params["poll"])
+        attribs = {
+            "size_gigabytes": self.module.params["size_gigabytes"],
+            "name": self.module.params["name"]
+        }
 
-            try:
-                volume = self.do.volume.info(volume["id"])
-                break
-            except:
-                pass
+        for param in ["region", "snapshot_id", "description"]:
+            if self.module.params[param] is not None:
+                attribs[param] = self.module.params[param]
 
-            if time.time() - start_time > self.module.params["timeout"]:
-                self.module.fail_json(
-                    msg="Timeout on polling", volume=volume
-                )
-
-        self.module.exit_json(changed=True, volume=volume)
+        (volume, created) = self.do.volume.present(
+            attribs,
+            wait=self.module.params["wait"],
+            poll=self.module.params["poll"],
+            timeout=self.module.params["timeout"]
+        )
+        self.module.exit_json(changed=(created is not None), volume=volume, created=created)
 
     def info(self):
 
@@ -224,30 +235,39 @@ class Volume(DOBOTOModule):
     @require("id", "name")
     @require("droplet_id")
     def attach(self):
-        self.action_result(self.do.volume.attach(
+        self.module.exit_json(changed=True, action=self.do.volume.attach(
             id=self.module.params["id"],
             name=self.module.params["name"],
             droplet_id=self.module.params["droplet_id"],
-            region=self.module.params["region"]
+            region=self.module.params["region"],
+            wait=self.module.params["wait"],
+            poll=self.module.params["poll"],
+            timeout=self.module.params["timeout"]
         ))
 
     @require("id", "name")
     @require("droplet_id")
     def detach(self):
-        self.action_result(self.do.volume.detach(
+        self.module.exit_json(changed=True, action=self.do.volume.detach(
             id=self.module.params["id"],
             name=self.module.params["name"],
             droplet_id=self.module.params["droplet_id"],
-            region=self.module.params["region"]
+            region=self.module.params["region"],
+            wait=self.module.params["wait"],
+            poll=self.module.params["poll"],
+            timeout=self.module.params["timeout"]
         ))
 
     @require("id", "name")
     @require("size_gigabytes")
     def resize(self):
-        self.action_result(self.do.volume.resize(
+        self.module.exit_json(changed=True, action=self.do.volume.resize(
             self.module.params["id"],
             self.module.params["size_gigabytes"],
-            region=self.module.params["region"]
+            region=self.module.params["region"],
+            wait=self.module.params["wait"],
+            poll=self.module.params["poll"],
+            timeout=self.module.params["timeout"]
         ))
 
     @require("id")

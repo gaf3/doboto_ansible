@@ -144,13 +144,21 @@ class Image(DOBOTOModule):
 
     @require("id")
     def convert(self):
-        self.action_result(self.do.image.convert(self.module.params["id"]))
+        self.module.exit_json(changed=True, action=self.do.image.convert(
+            self.module.params["id"],
+            wait=self.module.params["wait"],
+            poll=self.module.params["poll"],
+            timeout=self.module.params["timeout"]
+        ))
 
     @require("id")
     @require("region")
     def transfer(self):
-        self.action_result(self.do.image.transfer(
-            self.module.params["id"], self.module.params["region"]
+        self.module.exit_json(changed=True, action=self.do.image.transfer(
+            self.module.params["id"], self.module.params["region"],
+            wait=self.module.params["wait"],
+            poll=self.module.params["poll"],
+            timeout=self.module.params["timeout"]
         ))
 
     @require("id")

@@ -93,19 +93,12 @@ class SSHKey(DOBOTOModule):
         ))
 
     @require("name")
+    @require("public_key")
     def present(self):
-        ssh_keys = self.do.ssh_key.list()
-
-        existing = None
-        for ssh_key in ssh_keys:
-            if self.module.params["name"] == ssh_key["name"]:
-                existing = ssh_key
-                break
-
-        if existing is not None:
-            self.module.exit_json(changed=False, ssh_key=existing)
-        else:
-            self.create()
+        (ssh_key, created) = self.do.ssh_key.present(
+            self.module.params["name"], self.module.params["public_key"]
+        )
+        self.module.exit_json(changed=(created is not None), ssh_key=ssh_key, created=created)
 
     @require("id", "fingerprint")
     def info(self):

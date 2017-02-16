@@ -41,6 +41,7 @@ options:
         choices:
             - list
             - create
+            - present
             - info
             - destroy
             - record_list
@@ -91,6 +92,7 @@ class Domain(DOBOTOModule):
             action=dict(default=None, required=True, choices=[
                 "list",
                 "create",
+                "present",
                 "info",
                 "update",
                 "destroy",
@@ -122,6 +124,14 @@ class Domain(DOBOTOModule):
         self.module.exit_json(changed=True, domain=self.do.domain.create(
             self.module.params["name"], self.module.params["ip_address"]
         ))
+
+    @require("name")
+    @require("ip_address")
+    def present(self):
+        (domain, created) = self.do.domain.present(
+            self.module.params["name"], self.module.params["ip_address"]
+        )
+        self.module.exit_json(changed=(created is not None), domain=domain, created=created)
 
     @require("name")
     def info(self):
