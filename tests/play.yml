@@ -20,6 +20,11 @@
 
   - block:
     - include: library/clear.yml
+    - include: library/certificate.yml
+    tags: certificate
+
+  - block:
+    - include: library/clear.yml
     - include: library/droplet.yml
     tags: droplet
 

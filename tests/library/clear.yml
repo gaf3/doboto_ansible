@@ -9,6 +9,18 @@
       - "{{ account_info.account.uuid == 'b60c5d2212bf79e1a2bb0e3c1b2ae30a617fb796' }}"
     msg: "{{ account_info }}"
 
+- name: clear | certificate | list
+  doboto_certificate:
+    action: list
+  register: clear_certificate_list
+
+- name: clear | certificate | destroy
+  doboto_certificate:
+    action: destroy
+    id: "{{ item.id }}"
+  with_items: "{{ clear_certificate_list.certificates }}"
+  ignore_errors: yes
+
 - name: clear | domain | list
   doboto_domain:
     action: list
