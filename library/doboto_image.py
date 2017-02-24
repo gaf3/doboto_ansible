@@ -29,16 +29,14 @@ DOCUMENTATION = '''
 module: doboto_image
 
 short_description: Manage DigitalOcean images
-description:
-    - Manages DigitalOcean Images
+description: Manages DigitalOcean Images
 version_added: "0.1"
 author: "SWE Data <swe-data@do.co>"
 options:
     token:
-        description:
-            - token to use to connect to the API (uses DO_API_TOKEN from ENV if not found)
+        description: token to use to connect to the API (uses DO_API_TOKEN from ENV if not found)
     action:
-        image action
+        description: image action
         choices:
             - list
             - info
@@ -49,42 +47,117 @@ options:
             - action_list
             - action_info
     id:
-        description:
-            - same as DO API variable (image id)
+        description: same as DO API variable (image id)
     slug:
-        description:
-            - same as DO API variable (for info)
+        description: same as DO API variable (for info)
     name:
-        description:
-            - same as DO API variable (for update)
+        description: same as DO API variable (for update)
     type:
-        description:
-            - same as DO API variable (distribution or application)
+        description: same as DO API variable (distribution or application)
     private:
-        description:
-            - same as DO API variable (true for user images)
+        description: same as DO API variable (true for user images)
     region:
-        description:
-            - same as DO API variable (for transferring images)
+        description: same as DO API variable (for transferring images)
     wait:
-        description:
-            - wait until tasks has completed before continuing
+        description: wait until tasks has completed before continuing
     poll:
-        description:
-            - poll value to check while waiting (default 5 seconds)
+        description: poll value to check while waiting (default 5 seconds)
     timeout:
-        description:
-            - timeout value to give up after waiting (default 300 seconds)
+        description: timeout value to give up after waiting (default 300 seconds)
     action_id:
-        description:
-            - same as DO API variable (action id)
+        description: same as DO API variable (action id)
     url:
-        description:
-            - URL to use if not official (for experimenting)
+        description: URL to use if not official (for experimenting)
 
 '''
 
 EXAMPLES = '''
+- name: image | info | by slug
+  doboto_image:
+    action: info
+    slug: "debian-7-0-x64"
+  register: image_info_slug
+
+- name: image | info | by id
+  doboto_image:
+    action: info
+    id: "{{ image_info_slug.image.id }}"
+  register: image_info_id
+
+- name: image | droplet | create
+  doboto_droplet:
+    action: create
+    name: image-droplet
+    region: nyc3
+    size: 1gb
+    image: debian-7-0-x64
+    wait: true
+  register: image_droplet
+
+- name: image | droplet | snapshot | create
+  doboto_droplet:
+    action: snapshot_create
+    id: "{{ image_droplet.droplet.id }}"
+    snapshot_name: "how-bow-dah"
+    wait: true
+  register: image_snapshot_create
+
+- name: image | list
+  doboto_image:
+    action: list
+  register: image_list
+
+- name: image | list | distribution
+  doboto_image:
+    action: list
+    type: distribution
+  register: image_list_distribution
+
+- name: image | list | application
+  doboto_image:
+    action: list
+    type: application
+  register: image_list_application
+
+- name: image | list | user
+  doboto_image:
+    action: list
+    private: true
+  register: image_list_user
+
+- name: image | update
+  doboto_image:
+    action: update
+    id: "{{ image_snapshot_create.id }}"
+    name: "cash-me-ousside"
+  register: image_update
+
+- name: image | transfer
+  doboto_image:
+    action: transfer
+    id: "{{ image_snapshot_create.id }}"
+    region: nyc2
+  register: image_transfer
+
+- name: image | action | list
+  doboto_image:
+    action: action_list
+    id: "{{ image_snapshot_create.id }}"
+  register: image_action_list
+
+- name: image | action | info
+  doboto_image:
+    action: action_info
+    id: "{{ image_snapshot_create.id }}"
+    action_id: "{{ image_transfer.action.id }}"
+  register: image_action_info
+
+- name: image | destroy
+  doboto_image:
+    action: destroy
+    id: "{{ image_snapshot_create.id }}"
+  register: image_destroy
+
 '''
 
 
@@ -103,7 +176,7 @@ class Image(DOBOTOModule):
                 "action_list",
                 "action_info"
             ]),
-            token=dict(default=None),
+            token=dict(default=None, no_log=True),
             id=dict(default=None),
             slug=dict(default=None),
             name=dict(default=None),
@@ -175,4 +248,5 @@ class Image(DOBOTOModule):
         ))
 
 
-Image()
+if __name__ == '__main__':
+    Image()

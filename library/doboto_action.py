@@ -28,28 +28,34 @@ DOCUMENTATION = '''
 module: doboto_action
 
 short_description: Manage DigitalOcean Actions
-description:
-    - Manages DigitalOcean actions
+description: Manages DigitalOcean actions
 version_added: "0.1"
 author: "SWE Data <swe-data@do.co>"
 options:
     token:
-        description:
-            - token to use to connect to the API (uses DO_API_TOKEN from ENV if not found)
+        description: token to use to connect to the API (uses DO_API_TOKEN from ENV if not found)
     action:
-        action action
+        description: action action
         choices:
             - list
             - info
     id:
-        description:
-            - (Action ID) same as DO API variable
+        description: (Action ID) same as DO API variable
     url:
-        description:
-            - URL to use if not official (for experimenting)
+        description: URL to use if not official (for experimenting)
 '''
 
 EXAMPLES = '''
+- name: action | list
+  doboto_action:
+    action: list
+  register: action_list
+
+- name: action | info
+  doboto_action:
+    action: info
+    id: "{{ action_list.actions[0].id }}"
+  register: action_info
 '''
 
 
@@ -60,7 +66,7 @@ class Action(DOBOTOModule):
             action=dict(default=None, required=True, choices=[
                 "list", "info"
             ]),
-            token=dict(default=None),
+            token=dict(default=None, no_log=True),
             id=dict(default=None),
             url=dict(default=self.url),
         ))
@@ -75,4 +81,5 @@ class Action(DOBOTOModule):
         ))
 
 
-Action()
+if __name__ == '__main__':
+    Action()

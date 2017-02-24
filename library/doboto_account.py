@@ -28,24 +28,25 @@ DOCUMENTATION = '''
 module: doboto_account
 
 short_description: Manage DigitalOcean Account
-description:
-    - Manages DigitalOcean account
+description: Manages DigitalOcean account
 version_added: "0.1"
 author: "SWE Data <swe-data@do.co>"
 options:
     token:
-        description:
-            - token to use to connect to the API (uses DO_API_TOKEN from ENV if not found)
+        description: token to use to connect to the API (uses DO_API_TOKEN from ENV if not found)
     action:
-        account action
+        description: account action
         choices:
             - info
     url:
-        description:
-            - URL to use if not official (for experimenting)
+        description: URL to use if not official (for experimenting)
 '''
 
 EXAMPLES = '''
+- name: account | info
+  doboto_account:
+    action: info
+  register: account_info
 '''
 
 
@@ -54,7 +55,7 @@ class Account(DOBOTOModule):
     def input(self):
 
         return AnsibleModule(argument_spec=dict(
-            token=dict(default=None),
+            token=dict(default=None, no_log=True),
             action=dict(default=None),
             url=dict(default=self.url),
         ))
@@ -63,4 +64,5 @@ class Account(DOBOTOModule):
         self.module.exit_json(changed=False, account=self.do.account.info())
 
 
-Account()
+if __name__ == '__main__':
+    Account()

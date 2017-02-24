@@ -28,24 +28,25 @@ DOCUMENTATION = '''
 module: doboto_region
 
 short_description: Manage DigitalOcean Regions
-description:
-    - Manages DigitalOcean regions
+description: Manages DigitalOcean regions
 version_added: "0.1"
 author: "SWE Data <swe-data@do.co>"
 options:
     token:
-        description:
-            - token to use to connect to the API (uses DO_API_TOKEN from ENV if not found)
+        description: token to use to connect to the API (uses DO_API_TOKEN from ENV if not found)
     action:
-        region action
+        description: region action
         choices:
             - list
     url:
-        description:
-            - URL to use if not official (for experimenting)
+        description: URL to use if not official (for experimenting)
 '''
 
 EXAMPLES = '''
+- name: region | list
+  doboto_region:
+    action: list
+  register: region_list
 '''
 
 
@@ -57,7 +58,7 @@ class Region(DOBOTOModule):
             action=dict(default=None, required=True, choices=[
                 "list"
             ]),
-            token=dict(default=None),
+            token=dict(default=None, no_log=True),
             url=dict(default=self.url)
         ))
 
@@ -65,4 +66,5 @@ class Region(DOBOTOModule):
         self.module.exit_json(changed=False, regions=self.do.region.list())
 
 
-Region()
+if __name__ == '__main__':
+    Region()
