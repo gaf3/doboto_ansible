@@ -5,7 +5,7 @@ import os
 import time
 from ansible.module_utils.basic import AnsibleModule
 from doboto.DO import DO
-from doboto.DOBOTOException import DOBOTOException
+from doboto.exception import DOBOTOException, DOBOTONotFoundException, DOBOTOPollingException
 
 """
 Ansible util for DigitalOcean DOBOTO modules
@@ -68,5 +68,13 @@ class DOBOTOModule(object):
     def act(self):
         try:
             getattr(self, self.module.params["action"])()
+        except DOBOTONotFoundException as exception:
+            self.module.fail_json(msg=exception.message)
+        except DOBOTOPollingException as exception:
+            self.module.fail_json(
+                msg=exception.message,
+                polling=exception.result,
+                error=exception.result
+            )
         except DOBOTOException as exception:
             self.module.fail_json(msg=exception.message, result=exception.result)

@@ -244,6 +244,14 @@ class Droplet(DOBOTOModule):
             else:
                 getattr(self, self.module.params["action"])()
 
+        except DOBOTONotFoundException as exception:
+            self.module.fail_json(msg=exception.message)
+        except DOBOTOPollingException as exception:
+            self.module.fail_json(
+                msg=exception.message,
+                polling=exception.result,
+                error=exception.result
+            )
         except DOBOTOException as exception:
             self.module.fail_json(msg=exception.message, result=exception.result)
 
