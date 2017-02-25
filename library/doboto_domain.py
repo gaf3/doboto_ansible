@@ -28,16 +28,14 @@ DOCUMENTATION = '''
 module: doboto_domain
 
 short_description: Manage DigitalOcean domains
-description:
-    - Manages DigitalOcean Domains
+description: Manages DigitalOcean Domains
 version_added: "0.1"
 author: "SWE Data <swe-data@do.co>"
 options:
     token:
-        description:
-            - token to use to connect to the API (uses DO_API_TOKEN from ENV if not found)
+        description: token to use to connect to the API (uses DO_API_TOKEN from ENV if not found)
     action:
-        domain action
+        description: domain action
         choices:
             - list
             - create
@@ -50,38 +48,97 @@ options:
             - record_update
             - record_destroy
     name:
-        description:
-            - same as DO API variable
+        description: same as DO API variable
     ip_address:
-        description:
-            - same as DO API variable
+        description: same as DO API variable
     record_id:
-        description:
-            - same as DO API variable id for records
+        description: same as DO API variable id for records
     record_type:
-        description:
-            - same as DO API variable type for records
+        description: same as DO API variable type for records
     record_name:
-        description:
-            - same as DO API variable name for records
+        description: same as DO API variable name for records
     record_data:
-        description:
-            - same as DO API variable data for records
+        description: same as DO API variable data for records
     record_priority:
-        description:
-            - same as DO API variable priority for records
+        description: same as DO API variable priority for records
     record_port:
-        description:
-            - same as DO API variable port for records
+        description: same as DO API variable port for records
     record_weight:
-        description:
-            - same as DO API variable weight for records
+        description: same as DO API variable weight for records
     url:
-        description:
-            - URL to use if not official (for experimenting)
+        description: URL to use if not official (for experimenting)
 '''
 
 EXAMPLES = '''
+- name: domain | create
+  doboto_domain:
+    action: create
+    name: domain.create.com
+    ip_address: "1.2.3.4"
+  register: domain_create
+
+- name: domain | list
+  doboto_domain:
+    action: list
+  register: domain_list
+
+- name: domain | present | new
+  doboto_domain:
+    action: present
+    name: domain.present.com
+    ip_address: "2.3.4.5"
+  register: domain_present_new
+
+- name: domain | info
+  doboto_domain:
+    action: info
+    name: domain.create.com
+  register: domain_info
+
+- name: domain | record | list
+  doboto_domain:
+    action: record_list
+    name: domain.create.com
+  register: domain_record_list
+
+- name: domain | record | create
+  doboto_domain:
+    action: record_create
+    name: domain.create.com
+    record_type: CNAME
+    record_name: www.domain.create.com
+    record_data: domain.create.com.
+  register: domain_record_create
+
+- name: domain | record | info
+  doboto_domain:
+    action: record_info
+    name: domain.create.com
+    record_id: "{{ domain_record_create.domain_record.id }}"
+  register: domain_record_info
+
+- name: domain | record | update
+  doboto_domain:
+    action: record_update
+    name: domain.create.com
+    record_id: "{{ domain_record_create.domain_record.id }}"
+    record_name: w2.domain.create.com
+    record_data: domain.create.com.
+  register: domain_record_update
+
+- name: domain | record | destroy
+  doboto_domain:
+    action: record_destroy
+    name: domain.create.com
+    record_id: "{{ domain_record_create.domain_record.id }}"
+  register: domain_record_destroy
+
+- name: domain | destroy
+  doboto_domain:
+    action: destroy
+    name: domain.create.com
+  register: domain_destroy
+
 '''
 
 
@@ -102,7 +159,7 @@ class Domain(DOBOTOModule):
                 "record_update",
                 "record_destroy"
             ]),
-            token=dict(default=None),
+            token=dict(default=None, no_log=True),
             name=dict(default=None),
             ip_address=dict(default=None),
             record_id=dict(default=None),
@@ -207,4 +264,5 @@ class Domain(DOBOTOModule):
         ))
 
 
-Domain()
+if __name__ == '__main__':
+    Domain()

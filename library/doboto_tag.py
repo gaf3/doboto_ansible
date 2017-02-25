@@ -29,16 +29,14 @@ DOCUMENTATION = '''
 module: doboto_tag
 
 short_description: Manage DigitalOcean Tags
-description:
-    - Manages DigitalOcean tags
+description: Manages DigitalOcean tags
 version_added: "0.1"
 author: "SWE Data <swe-data@do.co>"
 options:
     token:
-        description:
-            - token to use to connect to the API (uses DO_API_TOKEN from ENV if not found)
+        description: token to use to connect to the API (uses DO_API_TOKEN from ENV if not found)
     action:
-        tag action
+        description: tag action
         choices:
             - list
             - name_list
@@ -50,29 +48,128 @@ options:
             - attach
             - detach
     name:
-        description:
-            - same as DO API variable
+        description: same as DO API variable
     new_name:
-        description:
-            - same as DO API variable, new name for updating
+        description: same as DO API variable, new name for updating
     resources:
-        description:
-            - same as DO API variable
+        description: same as DO API variable
     resource_type:
-        description:
-            - same as DO API variable, use if doing a single resource type
+        description: same as DO API variable, use if doing a single resource type
     resource_id:
-        description:
-            - same as DO API variable, use if doing a single resource id
+        description: same as DO API variable, use if doing a single resource id
     resource_ids:
-        description:
-            - paired with a single resource_type to build a resources list
+        description: paired with a single resource_type to build a resources list
     url:
-        description:
-            - URL to use if not official (for experimenting)
+        description: URL to use if not official (for experimenting)
 '''
 
 EXAMPLES = '''
+- name: tag | create
+  doboto_tag:
+    token: "{{ lookup('env','DO_API_TOKEN') }}"
+    action: create
+    name: tag-create
+  register: tag_create
+
+- name: tag | present | new
+  doboto_tag:
+    action: present
+    name: tag-present
+  register: tag_present_new
+
+- name: tag | info
+  doboto_tag:
+    action: info
+    name: tag-create
+  register: tag_info
+
+- name: tag | list
+  doboto_tag:
+    action: list
+  register: tag_list
+
+- name: tag | name_list
+  doboto_tag:
+    action: name_list
+  register: tag_name_list
+
+- name: tag | update
+  doboto_tag:
+    action: update
+    name: tag-create
+    new_name: tag-update
+  register: tag_update
+
+- name: tag | update | reload
+  doboto_tag:
+    action: info
+    name: tag-update
+  register: tag_update_reload
+
+- name: tag | update | reload | verify
+  assert:
+    that:
+      - "{{ tag_update_reload.tag.name == 'tag-update' }}"
+    msg: "{{ tag_update_reload }}"
+
+- name: tag | attach | create
+  doboto_droplet:
+    action: create
+    names:
+      - tag-droplet-01
+      - tag-droplet-02
+      - tag-droplet-03
+    region: nyc3
+    size: 1gb
+    image: ubuntu-14-04-x64
+    wait: true
+  register: tag_droplet
+
+- name: tag | attach | droplet
+  doboto_tag:
+    action: attach
+    name: tag-update
+    resource_type: "droplet"
+    resource_id: "{{ tag_droplet.droplets[0].id }}"
+  register: tag_attach
+
+- name: tag | attach | new | droplet
+  doboto_tag:
+    action: "{{item}}"
+    name: tag-new
+    resources:
+      -
+        resource_type: "droplet"
+        resource_id: "{{ tag_droplet.droplets[0].id }}"
+  with_items:
+    - present
+    - attach
+
+- name: tag | attach | multiple | droplet
+  doboto_tag:
+    action: "{{item}}"
+    name: tag-multi
+    resource_type: "droplet"
+    resource_ids: "{{tag_droplet|json_query(tag_droplet_ids_query)}}"
+  with_items:
+    - present
+    - attach
+  vars:
+    tag_droplet_ids_query: "droplets[].id"
+
+- name: tag | detach | droplet
+  doboto_tag:
+    action: detach
+    name: tag-update
+    resource_type: "droplet"
+    resource_id: "{{ tag_droplet.droplets[0].id }}"
+  register: tag_droplet_detach
+
+- name: tag | destroy
+  doboto_tag:
+    action: destroy
+    name: tag-update
+  register: tag_destroy
 '''
 
 
@@ -92,7 +189,7 @@ class Tag(DOBOTOModule):
                 "attach",
                 "detach",
             ]),
-            token=dict(default=None),
+            token=dict(default=None, no_log=True),
             name=dict(default=None),
             new_name=dict(default=None),
             resources=dict(default=None, type='list'),
@@ -186,4 +283,5 @@ class Tag(DOBOTOModule):
             self.module.params["name"]
         ))
 
-Tag()
+if __name__ == '__main__':
+    Tag()

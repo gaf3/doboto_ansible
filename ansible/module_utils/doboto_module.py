@@ -4,8 +4,6 @@
 import os
 import time
 from ansible.module_utils.basic import AnsibleModule
-from doboto.DO import DO
-from doboto.DOBOTOException import DOBOTOException
 
 """
 Ansible util for DigitalOcean DOBOTO modules
@@ -25,6 +23,13 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 """
+
+try:
+    from doboto.DO import DO
+    from doboto.exception import DOBOTOException, DOBOTONotFoundException, DOBOTOPollingException
+    HAS_DOBOTO = True
+except:
+    HAS_DOBOTO = False
 
 
 def require(*required):
@@ -53,6 +58,9 @@ class DOBOTOModule(object):
 
         self.module = self.input()
 
+        if not HAS_DOBOTO:
+            self.module.fail_json(msg="the doboto package is required")
+
         token = self.module.params["token"]
 
         if token is None:
@@ -63,10 +71,18 @@ class DOBOTOModule(object):
 
         self.do = DO(token=token, url=self.module.params["url"], agent=self.agent)
 
-        self.act()
-
-    def act(self):
         try:
-            getattr(self, self.module.params["action"])()
+            self.act()
+        except DOBOTONotFoundException as exception:
+            self.module.fail_json(msg=exception.message)
+        except DOBOTOPollingException as exception:
+            self.module.fail_json(
+                msg=exception.message,
+                polling=exception.result,
+                error=exception.result
+            )
         except DOBOTOException as exception:
             self.module.fail_json(msg=exception.message, result=exception.result)
+
+    def act(self):
+        getattr(self, self.module.params["action"])()

@@ -28,24 +28,25 @@ DOCUMENTATION = '''
 module: doboto_size
 
 short_description: Manage DigitalOcean Sizes
-description:
-    - Manages DigitalOcean sizes
+description: Manages DigitalOcean sizes
 version_added: "0.1"
 author: "SWE Data <swe-data@do.co>"
 options:
     token:
-        description:
-            - token to use to connect to the API (uses DO_API_TOKEN from ENV if not found)
+        description: token to use to connect to the API (uses DO_API_TOKEN from ENV if not found)
     action:
-        size action
+        description: size action
         choices:
             - list
     url:
-        description:
-            - URL to use if not official (for experimenting)
+        description: URL to use if not official (for experimenting)
 '''
 
 EXAMPLES = '''
+- name: size | list
+  doboto_size:
+    action: list
+  register: size_list
 '''
 
 
@@ -57,7 +58,7 @@ class Size(DOBOTOModule):
             action=dict(default=None, required=True, choices=[
                 "list"
             ]),
-            token=dict(default=None),
+            token=dict(default=None, no_log=True),
             url=dict(default=self.url)
         ))
 
@@ -65,4 +66,5 @@ class Size(DOBOTOModule):
         self.module.exit_json(changed=False, sizes=self.do.size.list())
 
 
-Size()
+if __name__ == '__main__':
+    Size()

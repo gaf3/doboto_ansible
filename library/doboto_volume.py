@@ -29,16 +29,14 @@ DOCUMENTATION = '''
 module: doboto_volume
 
 short_description: Manage DigitalOcean volumes
-description:
-    - Manages DigitalOcean Block Storage
+description: Manages DigitalOcean Block Storage
 version_added: "0.1"
 author: "SWE Data <swe-data@do.co>"
 options:
     token:
-        description:
-            - token to use to connect to the API (uses DO_API_TOKEN from ENV if not found)
+        description: token to use to connect to the API (uses DO_API_TOKEN from ENV if not found)
     action:
-        volume action
+        description: volume action
         choices:
             - list
             - create
@@ -53,48 +51,153 @@ options:
             - action_list
             - action_info
     id:
-        description:
-            - same as DO API variable (volume id)
+        description: same as DO API variable (volume id)
     name:
-        description:
-            - same as DO API variable
+        description: same as DO API variable
     description:
-        description:
-            - same as DO API variable
+        description: same as DO API variable
     region:
-        description:
-            - same as DO API variable
+        description: same as DO API variable
     size_gigabytes:
-        description:
-            - same as DO API variable
+        description: same as DO API variable
     snapshot_id:
-        description:
-            - same as DO API variable
+        description: same as DO API variable
     snapshot_name:
-        description:
-            - name to give a snapshot
+        description: name to give a snapshot
     droplet_id:
-        description:
-            - same as DO API variable
+        description: same as DO API variable
     wait:
-        description:
-            - wait until tasks has completed before continuing
+        description: wait until tasks has completed before continuing
     poll:
-        description:
-            - poll value to check while waiting (default 5 seconds)
+        description: poll value to check while waiting (default 5 seconds)
     timeout:
-        description:
-            - timeout value to give up after waiting (default 300 seconds)
+        description: timeout value to give up after waiting (default 300 seconds)
     action_id:
-        description:
-            - same as DO API variable (action id)
+        description: same as DO API variable (action id)
     url:
-        description:
-            - URL to use if not official (for experimenting)
+        description: URL to use if not official (for experimenting)
 
 '''
 
 EXAMPLES = '''
+- name: volume | create
+  doboto_volume:
+    token: "{{ lookup('env','DO_API_TOKEN') }}"
+    action: create
+    name: volume-create
+    region: nyc1
+    size_gigabytes: 1
+    description: "A nice one"
+  register: volume_create
+
+- name: volume | list
+  doboto_volume:
+    action: list
+  register: volume_list
+
+- name: volume | info | by id
+  doboto_volume:
+    action: info
+    id: "{{ volume_create.volume.id }}"
+  register: volume_info_id
+
+- name: volume | info | by name region
+  doboto_volume:
+    action: info
+    name: volume-create
+    region: nyc1
+  register: volume_info_name_region
+
+- name: volume | snapshot | create
+  doboto_volume:
+    action: snapshot_create
+    id: "{{ volume_create.volume.id }}"
+    snapshot_name: bulletproof
+  register: volume_snapshot_create
+
+- name: volume | snapshot | list
+  doboto_volume:
+    action: snapshot_list
+    id: "{{ volume_create.volume.id }}"
+  register: volume_snapshot_list
+
+- name: volume | droplet | create
+  doboto_droplet:
+    action: create
+    name: volume-droplet
+    region: nyc1
+    size: 1gb
+    image: debian-7-0-x64
+    wait: true
+  register: volume_droplet
+
+- name: volume | create | by snapshot
+  doboto_volume:
+    action: create
+    name: volume-create-snapshot
+    snapshot_id: "{{ volume_snapshot_create.snapshot.id }}"
+    size_gigabytes: 2
+    description: "A bad one"
+    wait: true
+  register: volume_create_snapshot
+
+- name: volume | attach | by id
+  doboto_volume:
+    action: attach
+    id: "{{ volume_create.volume.id }}"
+    droplet_id: "{{ volume_droplet.droplet.id }}"
+    wait: true
+  register: volume_attach_id
+
+- name: volume | attach | by name
+  doboto_volume:
+    action: attach
+    name: volume-create-snapshot
+    region: nyc1
+    droplet_id: "{{ volume_droplet.droplet.id }}"
+    wait: true
+  register: volume_attach_name
+
+- name: volume | detach | by id
+  doboto_volume:
+    action: detach
+    id: "{{ volume_create.volume.id }}"
+    droplet_id: "{{ volume_droplet.droplet.id }}"
+    wait: true
+  register: volume_detach_id
+
+- name: volume | resize
+  doboto_volume:
+    action: resize
+    id: "{{ volume_create.volume.id }}"
+    size_gigabytes: 3
+  register: volume_resize
+
+- name: volume | action | list
+  doboto_volume:
+    action: action_list
+    id: "{{ volume_create.volume.id }}"
+  register: volume_action_list
+
+- name: volume | action | info
+  doboto_volume:
+    action: action_info
+    id: "{{ volume_create.volume.id }}"
+    action_id: "{{ volume_attach_id.action.id }}"
+  register: volume_action_info
+
+- name: volume | destroy | by id
+  doboto_volume:
+    action: destroy
+    id: "{{ volume_create.volume.id }}"
+  register: volume_destroy_id
+
+- name: volume | destroy | by name region
+  doboto_volume:
+    action: destroy
+    name: volume-create-snapshot
+    region: nyc1
+  register: volume_destroy_name_region
 '''
 
 
@@ -117,7 +220,7 @@ class Volume(DOBOTOModule):
                 "action_list",
                 "action_info"
             ]),
-            token=dict(default=None),
+            token=dict(default=None, no_log=True),
             id=dict(default=None),
             name=dict(default=None),
             description=dict(default=None),
@@ -284,4 +387,5 @@ class Volume(DOBOTOModule):
         ))
 
 
-Volume()
+if __name__ == '__main__':
+    Volume()

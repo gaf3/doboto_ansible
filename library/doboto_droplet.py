@@ -3,7 +3,6 @@
 
 import time
 import copy
-from doboto.DOBOTOException import DOBOTOException
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.doboto_module import require, DOBOTOModule
 
@@ -31,16 +30,14 @@ DOCUMENTATION = '''
 module: doboto_droplet
 
 short_description: Manage DigitalOcean droplets
-description:
-    - Manages DigitalOcean droplets
+description: Manages DigitalOcean droplets
 version_added: "0.1"
 author: "SWE Data <swe-data@do.co>"
 options:
     token:
-        description:
-            - token to use to connect to the API (uses DO_API_TOKEN from ENV if not found)
+        description: token to use to connect to the API (uses DO_API_TOKEN from ENV if not found)
     action:
-        droplet action
+        description: droplet action
         choices:
             - list
             - neighbor_list
@@ -72,81 +69,179 @@ options:
             - action_info
 
     id:
-        description:
-            - same as DO API variable (droplet id)
+        description: same as DO API variable (droplet id)
     name:
-        description:
-            - same as DO API variable (for single create)
+        description: same as DO API variable (for single create)
     names:
-        description:
-            - same as DO API variable (for mass create)
+        description: same as DO API variable (for mass create)
     region:
-        description:
-            - same as DO API variable
+        description: same as DO API variable
     size:
-        description:
-            - same as DO API variable
+        description: same as DO API variable
     disk:
-        description:
-            - same as DO API variable
+        description: same as DO API variable
     image:
-        description:
-            - same as DO API variable
+        description: same as DO API variable
     kernel:
-        description:
-            - same as DO API variable
+        description: same as DO API variable
     ssh_keys:
-        description:
-            - same as DO API variable (if single value, converted to array)
+        description: same as DO API variable (if single value, converted to array)
     backups:
-        description:
-            - same as DO API variable
+        description: same as DO API variable
     ipv6:
-        description:
-            - same as DO API variable
+        description: same as DO API variable
     private_networking:
-        description:
-            - same as DO API variable
+        description: same as DO API variable
     user_data:
-        description:
-            - same as DO API variable
+        description: same as DO API variable
     monitoring:
-        description:
-            - same as DO API variable
+        description: same as DO API variable
     volume:
-        description:
-            - same as DO API variable (if single value, converted to array)
+        description: same as DO API variable (if single value, converted to array)
     tags:
-        description:
-            - same as DO API variable (if single value, converted to array)
+        description: same as DO API variable (if single value, converted to array)
     tag_name:
-        description:
-            - same as DO API variable (for tag ID)
+        description: same as DO API variable (for tag ID)
     snapshot_name:
-        description:
-            - name of the snapshot
+        description: name of the snapshot
     wait:
-        description:
-            - wait until tasks has completed before continuing
+        description: wait until tasks has completed before continuing
     poll:
-        description:
-            - poll value to check while waiting (default 5 seconds)
+        description: poll value to check while waiting (default 5 seconds)
     timeout:
-        description:
-            - timeout value to give up after waiting (default 300 seconds)
+        description: timeout value to give up after waiting (default 300 seconds)
     action_id:
-        description:
-            - same as DO API variable (action id)
+        description: same as DO API variable (action id)
     url:
-        description:
-            - URL to use if not official (for experimenting)
+        description: URL to use if not official (for experimenting)
     extra:
-        description:
-            - key / value of extra values to send (for experimenting)
+        description: key / value of extra values to send (for experimenting)
 
 '''
 
 EXAMPLES = '''
+- name: droplet | create | simple
+  doboto_droplet:
+    action: create
+    name: droplet-create
+    region: nyc3
+    size: 1gb
+    image: debian-7-0-x64
+  register: droplet_create
+
+- name: droplet | create | multiple
+  doboto_droplet:
+    action: create
+    names:
+      - droplet-create-01
+      - droplet-create-02
+      - droplet-create-03
+    region: nyc3
+    size: 1gb
+    image: ubuntu-14-04-x64
+  register: droplets_create
+
+- name: droplet | ssh_key | file
+  command: ssh-keygen -t rsa -P "" -C "doboto@digitalocean.com" -f /tmp/id_doboto
+
+- name: droplet | ssh_key | create
+  doboto_ssh_key:
+    action: create
+    name: droplet-ssh-key
+    public_key: "{{ lookup('file', '/tmp/id_doboto.pub') }}"
+  register: droplet_ssh_key
+
+- name: droplet | present | complex | new
+  doboto_droplet:
+    action: present
+    name: droplet-present
+    region: nyc3
+    size: 2gb
+    image: ubuntu-14-04-x64
+    ssh_keys: "{{ droplet_ssh_key.ssh_key.id }}"
+    backups: true
+    ipv6: true
+    private_networking: true
+    user_data: "stuff"
+    tags: one
+    wait: true
+  register: droplet_present_new
+
+- name: droplet | present | complex | public ipv4 address
+  debug:
+    msg: "{{droplet_present_new|json_query(public_ipv4_query)}}"
+  vars:
+    public_ipv4_query: "droplet.networks.v4[?type=='public'].ip_address | [0]"
+
+- name: droplet | present | complex | private ipv4 address
+  debug:
+    msg: "{{droplet_present_new|json_query(private_ipv4_query)}}"
+  vars:
+    private_ipv4_query: "droplet.networks.v4[?type=='private'].ip_address | [0]"
+
+- name: droplet | present | complex | public ipv6 address
+  debug:
+    msg: "{{droplet_present_new|json_query(public_ipv6_query)}}"
+  vars:
+    public_ipv6_query: "droplet.networks.v6[?type=='public'].ip_address | [0]"
+
+- name: droplet | info
+  doboto_droplet:
+    action: info
+    id: "{{ droplet_create.droplet.id }}"
+  register: droplet_info
+
+- name: droplet | list
+  doboto_droplet:
+    action: list
+  register: droplets_list
+
+- name: droplet | list | tag
+  doboto_droplet:
+    action: list
+    tag_name: some
+  register: droplets_list_tag
+
+- name: droplet | action | list
+  doboto_droplet:
+    action: action_list
+    id: "{{ droplet_create.droplet.id }}"
+  register: droplet_action_list
+
+- name: droplet | destroy | by id
+  doboto_droplet:
+    action: destroy
+    id: "{{ droplet_create.droplet.id }}"
+  register: droplet_id_destroy
+
+- name: droplet | destroy | by tag
+  doboto_droplet:
+    action: destroy
+    tag_name: some
+  register: droplet_tag_destroy
+
+- name: droplet_action | single | password_reset
+  doboto_droplet:
+    action: password_reset
+    id: "{{ droplet_create.droplet.id }}"
+    wait: true
+  register: single_password_reset
+
+- name: droplet_action | single | resize
+  doboto_droplet:
+    action: resize
+    id: "{{ droplet_create.droplet.id }}"
+    size: 2gb
+    disk: true
+    wait: true
+  register: single_resize
+
+- name: droplet_action | multiple | power_off
+  doboto_droplet:
+    action: power_off
+    tag_name: some
+    wait: true
+  register: multiple_power_off
 '''
 
 
@@ -185,7 +280,7 @@ class Droplet(DOBOTOModule):
                 "action_list",
                 "action_info",
             ]),
-            token=dict(default=None),
+            token=dict(default=None, no_log=True),
             id=dict(default=None),
             name=dict(default=None),
             names=dict(default=None, type='list'),
@@ -214,38 +309,33 @@ class Droplet(DOBOTOModule):
 
     def act(self):
 
-        try:
-
-            if self.module.params["action"] in [
-                "kernel_list",
-                "snapshot_list",
-                "backup_list",
-                "action_list"
-            ]:
-                self.list_action(self.module.params["action"].replace('_list', 's'))
-            elif self.module.params["action"] in [
-                "backup_enable",
-                "backup_disable",
-                "shutdown",
-                "power_cycle",
-                "power_on",
-                "power_off",
-                "private_networking_enable",
-                "ipv6_enable"
-            ]:
-                self.action()
-            elif self.module.params["action"] in [
-                "reboot",
-                "password_reset"
-            ]:
-                self.action(tagless=True)
-            elif self.module.params["action"] == "neighbor_list":
-                self.list_action("droplets")
-            else:
-                getattr(self, self.module.params["action"])()
-
-        except DOBOTOException as exception:
-            self.module.fail_json(msg=exception.message, result=exception.result)
+        if self.module.params["action"] in [
+            "kernel_list",
+            "snapshot_list",
+            "backup_list",
+            "action_list"
+        ]:
+            self.list_action(self.module.params["action"].replace('_list', 's'))
+        elif self.module.params["action"] in [
+            "backup_enable",
+            "backup_disable",
+            "shutdown",
+            "power_cycle",
+            "power_on",
+            "power_off",
+            "private_networking_enable",
+            "ipv6_enable"
+        ]:
+            self.action()
+        elif self.module.params["action"] in [
+            "reboot",
+            "password_reset"
+        ]:
+            self.action(tagless=True)
+        elif self.module.params["action"] == "neighbor_list":
+            self.list_action("droplets")
+        else:
+            getattr(self, self.module.params["action"])()
 
     def list(self):
         self.module.exit_json(changed=False, droplets=self.do.droplet.list(
@@ -465,4 +555,5 @@ class Droplet(DOBOTOModule):
         ))
 
 
-Droplet()
+if __name__ == '__main__':
+    Droplet()
