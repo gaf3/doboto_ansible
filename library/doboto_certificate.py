@@ -1,9 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import time
-import copy
-from doboto.DOBOTOException import DOBOTOException
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.doboto_module import require, DOBOTOModule
 
@@ -31,16 +28,14 @@ DOCUMENTATION = '''
 module: doboto_certificate
 
 short_description: Manage DigitalOcean certificates
-description:
-    - Manages DigitalOcean certificates
-version_added: "0.1"
+description: Manages DigitalOcean certificates
+version_added: "0.5.0"
 author: "SWE Data <swe-data@do.co>"
 options:
     token:
-        description:
-            - token to use to connect to the API (uses DO_API_TOKEN from ENV if not found)
+        description: token to use to connect to the API (uses DO_API_TOKEN from ENV if not found)
     action:
-        certificate action
+        description: certificate action
         choices:
             - list
             - create
@@ -49,27 +44,63 @@ options:
             - destroy
 
     id:
-        description:
-            - same as DO API variable (certificate id)
+        description: same as DO API variable (certificate id)
     name:
-        description:
-            - same as DO API variable
+        description: same as DO API variable
     private_key:
-        description:
-            - same as DO API variable
+        description: same as DO API variable
     leaf_certificate:
-        description:
-            - same as DO API variable
+        description: same as DO API variable
     certificate_chain:
-        description:
-            - same as DO API variable
+        description: same as DO API variable
     url:
-        description:
-            - URL to use if not official (for experimenting)
-
+        description: URL to use if not official (for experimenting)
 '''
 
 EXAMPLES = '''
+- name: certificate | create
+  doboto_certificate:
+    action: create
+    name: certificate-create
+    private_key: "{{ lookup('file', 'private.pem') }}"
+    leaf_certificate: "{{ lookup('file', 'public.pem') }}"
+    certificate_chain: "{{ lookup('file', 'public.pem') }}"
+  register: certificate_create
+
+- name: certificate | present | exists
+  doboto_certificate:
+    action: present
+    name: certificate-create
+    private_key: "{{ lookup('file', 'private.pem') }}"
+    leaf_certificate: "{{ lookup('file', 'public.pem') }}"
+    certificate_chain: "{{ lookup('file', 'public.pem') }}"
+  register: certificate_present_exists
+
+- name: certificate | present | new
+  doboto_certificate:
+    action: present
+    name: certificate-present
+    private_key: "{{ lookup('file', 'private.pem') }}"
+    leaf_certificate: "{{ lookup('file', 'public.pem') }}"
+    certificate_chain: "{{ lookup('file', 'public.pem') }}"
+  register: certificate_present_new
+
+- name: certificate | info
+  doboto_certificate:
+    action: info
+    id: "{{ certificate_create.certificate.id }}"
+  register: certificate_info
+
+- name: certificate | list
+  doboto_certificate:
+    action: list
+  register: certificates_list
+
+- name: certificate | destroy
+  doboto_certificate:
+    action: destroy
+    id: "{{ certificate_create.certificate.id }}"
+  register: certificate_destroy
 '''
 
 
@@ -141,4 +172,5 @@ class Certificate(DOBOTOModule):
         ))
 
 
-Certificate()
+if __name__ == '__main__':
+    Certificate()
