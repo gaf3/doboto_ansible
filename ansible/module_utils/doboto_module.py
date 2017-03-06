@@ -4,8 +4,6 @@
 import os
 import time
 from ansible.module_utils.basic import AnsibleModule
-from doboto.DO import DO
-from doboto.DOBOTOException import DOBOTOException
 
 """
 Ansible util for DigitalOcean DOBOTO modules
@@ -25,6 +23,13 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 """
+
+try:
+    from doboto.DO import DO
+    from doboto.exception import DOBOTOException, DOBOTONotFoundException, DOBOTOPollingException
+    HAS_DOBOTO = True
+except:
+    HAS_DOBOTO = False
 
 
 def require(*required):
@@ -53,6 +58,9 @@ class DOBOTOModule(object):
 
         self.module = self.input()
 
+        if not HAS_DOBOTO:
+            self.module.fail_json(msg="the doboto package is required")
+
         token = self.module.params["token"]
 
         if token is None:
@@ -63,48 +71,18 @@ class DOBOTOModule(object):
 
         self.do = DO(token=token, url=self.module.params["url"], agent=self.agent)
 
-        self.act()
-
-    def act(self):
         try:
-            getattr(self, self.module.params["action"])()
+            self.act()
+        except DOBOTONotFoundException as exception:
+            self.module.fail_json(msg=exception.message)
+        except DOBOTOPollingException as exception:
+            self.module.fail_json(
+                msg=exception.message,
+                polling=exception.result,
+                error=exception.result
+            )
         except DOBOTOException as exception:
             self.module.fail_json(msg=exception.message, result=exception.result)
 
-    def action_result(self, action):
-
-        start_time = time.time()
-
-        while self.module.params["wait"] and action["status"] == "in-progress":
-
-            time.sleep(self.module.params["poll"])
-            try:
-                action = self.do.action.info(action["id"])
-            except:
-                pass
-
-            if time.time() - start_time > self.module.params["timeout"]:
-                self.module.fail_json(msg="Timeout on polling", action=action)
-
-        self.module.exit_json(changed=True, action=action)
-
-    def actions_result(self, actions):
-
-        start_time = time.time()
-
-        while self.module.params["wait"] and \
-                len([1 for action in actions if action["status"] == "in-progress"]) > 0:
-
-            time.sleep(self.module.params["poll"])
-
-            for index, action in enumerate(actions):
-                if action["status"] == "in-progress":
-                    try:
-                        actions[index] = self.do.action.info(action["id"])
-                    except:
-                        pass
-
-            if time.time() - start_time > self.module.params["timeout"]:
-                self.module.fail_json(msg="Timeout on polling", actions=actions)
-
-        self.module.exit_json(changed=True, actions=actions)
+    def act(self):
+        getattr(self, self.module.params["action"])()

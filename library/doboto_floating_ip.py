@@ -29,16 +29,14 @@ DOCUMENTATION = '''
 module: doboto_floating_ip
 
 short_description: Manage DigitalOcean Floating IPs
-description:
-    - Manages DigitalOcean Floating IPs
+description: Manages DigitalOcean Floating IPs
 version_added: "0.1"
 author: "SWE Data <swe-data@do.co>"
 options:
     token:
-        description:
-            - token to use to connect to the API (uses DO_API_TOKEN from ENV if not found)
+        description: token to use to connect to the API (uses DO_API_TOKEN from ENV if not found)
     action:
-        floating_ip action
+        description: floating_ip action
         choices:
             - list
             - create
@@ -75,6 +73,85 @@ options:
 '''
 
 EXAMPLES = '''
+- name: floating_ip | droplet | create
+  doboto_droplet:
+    action: create
+    name: floating-ip-droplet
+    region: nyc1
+    size: 1gb
+    image: debian-7-0-x64
+    wait: true
+  register: floating_ip_droplet
+
+- name: floating_ip | create | droplet
+  doboto_floating_ip:
+    action: create
+    droplet_id: "{{ floating_ip_droplet.droplet.id }}"
+    wait: true
+  register: floating_ip_create_droplet
+
+- name: floating_ip | create | region
+  doboto_floating_ip:
+    action: create
+    region: nyc1
+    wait: true
+  register: floating_ip_create_region
+
+- name: floating_ip | list
+  doboto_floating_ip:
+    action: list
+  register: floating_ip_list
+
+- name: floating_ip | info
+  doboto_floating_ip:
+    action: info
+    ip: "{{ floating_ip_create_region.floating_ip.ip }}"
+  register: floating_ip_info
+
+- name: floating_ip | droplet | assign
+  doboto_droplet:
+    action: create
+    name: floating-ip-assign
+    region: nyc1
+    size: 1gb
+    image: debian-7-0-x64
+    wait: true
+  register: floating_ip_assign
+
+- name: floating_ip | assign
+  doboto_floating_ip:
+    action: assign
+    ip: "{{ floating_ip_create_region.floating_ip.ip }}"
+    droplet_id: "{{ floating_ip_assign.droplet.id }}"
+    wait: true
+  register: floating_ip_assign
+
+- name: floating_ip | unassign
+  doboto_floating_ip:
+    action: unassign
+    ip: "{{ floating_ip_create_region.floating_ip.ip }}"
+    wait: true
+  register: floating_ip_unassign
+
+- name: floating_ip | action | list
+  doboto_floating_ip:
+    action: action_list
+    ip: "{{ floating_ip_create_region.floating_ip.ip }}"
+  register: floating_ip_action_list
+
+- name: floating_ip | action | info
+  doboto_floating_ip:
+    action: action_info
+    ip: "{{ floating_ip_create_region.floating_ip.ip }}"
+    action_id: "{{ floating_ip_unassign.action.id }}"
+  register: floating_ip_action_info
+
+- name: floating_ip | destroy
+  doboto_floating_ip:
+    action: destroy
+    ip: "{{ floating_ip_create_region.floating_ip.ip }}"
+  register: floating_ip_destroy
+
 '''
 
 
@@ -93,7 +170,7 @@ class FloatingIP(DOBOTOModule):
                 "action_list",
                 "action_info"
             ]),
-            token=dict(default=None),
+            token=dict(default=None, no_log=True),
             ip=dict(default=None),
             region=dict(default=None),
             droplet_id=dict(default=None),
@@ -148,14 +225,20 @@ class FloatingIP(DOBOTOModule):
     @require("ip")
     @require("droplet_id")
     def assign(self):
-        self.action_result(self.do.floating_ip.assign(
-            self.module.params["ip"], self.module.params["droplet_id"]
+        self.module.exit_json(changed=True, action=self.do.floating_ip.assign(
+            self.module.params["ip"], self.module.params["droplet_id"],
+            wait=self.module.params["wait"],
+            poll=self.module.params["poll"],
+            timeout=self.module.params["timeout"]
         ))
 
     @require("ip")
     def unassign(self):
-        self.action_result(self.do.floating_ip.unassign(
-            self.module.params["ip"]
+        self.module.exit_json(changed=True, action=self.do.floating_ip.unassign(
+            self.module.params["ip"],
+            wait=self.module.params["wait"],
+            poll=self.module.params["poll"],
+            timeout=self.module.params["timeout"]
         ))
 
     @require("ip")
@@ -172,4 +255,5 @@ class FloatingIP(DOBOTOModule):
         ))
 
 
-FloatingIP()
+if __name__ == '__main__':
+    FloatingIP()

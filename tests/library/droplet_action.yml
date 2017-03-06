@@ -165,7 +165,6 @@
   doboto_droplet:
     action: password_reset
     id: "{{ droplet_action.droplet.id }}"
-    image: ubuntu-14-04-x64
     wait: true
   register: single_password_reset
 

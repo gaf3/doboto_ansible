@@ -28,16 +28,14 @@ DOCUMENTATION = '''
 module: doboto_ssh_key
 
 short_description: Manage DigitalOcean SSH Keys
-description:
-    - Manages DigitalOcean ssh keys
+description: Manages DigitalOcean ssh keys
 version_added: "0.1"
 author: "SWE Data <swe-data@do.co>"
 options:
     token:
-        description:
-            - token to use to connect to the API (uses DO_API_TOKEN from ENV if not found)
+        description: token to use to connect to the API (uses DO_API_TOKEN from ENV if not found)
     action:
-        ssh key action
+        description: ssh key action
         choices:
             - list
             - create
@@ -46,23 +44,69 @@ options:
             - update
             - destroy
     id:
-        description:
-            - (SSH Key ID) same as DO API variable
+        description: (SSH Key ID) same as DO API variable
     name:
-        description:
-            - same as DO API variable
+        description: same as DO API variable
     public_key:
-        description:
-            - same as DO API variable
+        description: same as DO API variable
     fingerprint:
-        description:
-            - same as DO API variable
+        description: same as DO API variable
     url:
-        description:
-            - URL to use if not official (for experimenting)
+        description: URL to use if not official (for experimenting)
 '''
 
 EXAMPLES = '''
+- name: ssh_key | create | generate key
+  command: ssh-keygen -t rsa -P "" -C "doboto@digitalocean.com" -f /tmp/id_doboto
+
+- name: ssh_key | create | generate fingerprint
+  command: ssh-keygen -lf /tmp/id_doboto.pub
+  register: ssh_key_fingerprint
+
+- name: ssh_key | create
+  doboto_ssh_key:
+    token: "{{ lookup('env','DO_API_TOKEN') }}"
+    action: create
+    name: ssh-key-create
+    public_key: "{{ lookup('file', '/tmp/id_doboto.pub') }}"
+  register: ssh_key_create
+
+- name: ssh_key | present | exists
+  doboto_ssh_key:
+    action: present
+    name: ssh-key-create
+    public_key: "{{ lookup('file', '/tmp/id_doboto.pub') }}"
+  register: ssh_key_present_exists
+
+- name: ssh_key | list
+  doboto_ssh_key:
+    action: list
+  register: ssh_key_list
+
+- name: ssh_key | info | by id
+  doboto_ssh_key:
+    action: info
+    id: "{{ ssh_key_create.ssh_key.id }}"
+  register: ssh_key_id_info
+
+- name: ssh_key | info | by fingerprint
+  doboto_ssh_key:
+    action: info
+    fingerprint: "{{ ssh_key_create.ssh_key.fingerprint }}"
+  register: ssh_key_fingerprint_info
+
+- name: ssh_key | update | by id
+  doboto_ssh_key:
+    action: update
+    id: "{{ ssh_key_create.ssh_key.id }}"
+    name: ssh-key-id-update
+  register: ssh_key_id_update
+
+- name: ssh_key | destroy | by id
+  doboto_ssh_key:
+    action: destroy
+    id: "{{ ssh_key_create.ssh_key.id }}"
+  register: ssh_key_id_destroy
 '''
 
 
@@ -74,7 +118,7 @@ class SSHKey(DOBOTOModule):
             action=dict(default=None, required=True, choices=[
                 "create", "present", "list", "info", "update", "destroy"
             ]),
-            token=dict(default=None),
+            token=dict(default=None, no_log=True),
             id=dict(default=None),
             fingerprint=dict(default=None),
             public_key=dict(default=None),
@@ -93,19 +137,12 @@ class SSHKey(DOBOTOModule):
         ))
 
     @require("name")
+    @require("public_key")
     def present(self):
-        ssh_keys = self.do.ssh_key.list()
-
-        existing = None
-        for ssh_key in ssh_keys:
-            if self.module.params["name"] == ssh_key["name"]:
-                existing = ssh_key
-                break
-
-        if existing is not None:
-            self.module.exit_json(changed=False, ssh_key=existing)
-        else:
-            self.create()
+        (ssh_key, created) = self.do.ssh_key.present(
+            self.module.params["name"], self.module.params["public_key"]
+        )
+        self.module.exit_json(changed=(created is not None), ssh_key=ssh_key, created=created)
 
     @require("id", "fingerprint")
     def info(self):
@@ -128,4 +165,5 @@ class SSHKey(DOBOTOModule):
         ))
 
 
-SSHKey()
+if __name__ == '__main__':
+    SSHKey()

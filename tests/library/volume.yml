@@ -11,6 +11,7 @@
 - name: volume | create  | verify
   assert:
     that:
+      - "{{ volume_create.changed }}"
       - "{{ volume_create.volume.name == 'volume-create' }}"
       - "{{ volume_create.volume.region.slug == 'nyc1' }}"
       - "{{ volume_create.volume.size_gigabytes == 1 }}"
@@ -28,6 +29,48 @@
     that:
       - "{{ volume_list.volumes[0].id == volume_create.volume.id }}"
     msg: "{{ volume_list }}"
+
+- name: volume | present | exists
+  doboto_volume:
+    action: present
+    name: volume-create
+    region: nyc1
+    size_gigabytes: 1
+    description: "A nice one"
+  register: volume_present_exists
+
+- name: volume | present | exists | verify
+  assert:
+    that:
+      - "{{ not volume_present_exists.changed }}"
+      - "{{ volume_present_exists.volume.name == 'volume-create' }}"
+      - "{{ volume_present_exists.volume.region.slug == 'nyc1' }}"
+      - "{{ volume_present_exists.volume.size_gigabytes == 1 }}"
+      - "{{ volume_present_exists.volume.description == 'A nice one' }}"
+      - "{{ volume_present_exists.volume.droplet_ids == [] }}"
+      - "{{ volume_present_exists.created is none }}"
+    msg: "{{ volume_present_exists }}"
+
+- name: volume | present | new
+  doboto_volume:
+    action: present
+    name: volume-present
+    region: nyc1
+    size_gigabytes: 1
+    description: "A nice one"
+  register: volume_present_new
+
+- name: volume | present | new | verify
+  assert:
+    that:
+      - "{{ volume_present_new.changed }}"
+      - "{{ volume_present_new.volume.name == 'volume-present' }}"
+      - "{{ volume_present_new.volume.region.slug == 'nyc1' }}"
+      - "{{ volume_present_new.volume.size_gigabytes == 1 }}"
+      - "{{ volume_present_new.volume.description == 'A nice one' }}"
+      - "{{ volume_present_new.volume.droplet_ids == [] }}"
+      - "{{ volume_present_new.created == volume_present_new.volume }}"
+    msg: "{{ volume_present_new }}"
 
 - name: volume | info | by id
   doboto_volume:
