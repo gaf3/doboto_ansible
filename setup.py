@@ -5,14 +5,14 @@ import os
 
 setup(
     name='doboto-ansible',
-    version="0.4.0",
+    version="0.5.0",
     description="DOBOTO Ansible Modules",
     packages=['ansible.module_utils'],
     long_description="BOTO-like Ansible modules for interacting with the Digital Ocean API",
     author="Digital Ocean Data Team",
     author_email="swe-data@do.co",
     install_requires=[
-        "doboto>=0.4.0"
+        "doboto>=0.5.0"
     ],
     classifiers=[
         'Programming Language :: Python :: 2'
@@ -21,6 +21,8 @@ setup(
     data_files=[("/usr/share/ansible/doboto/", [
         "library/doboto_account.py",
         "library/doboto_action.py",
+        "library/doboto_volume.py",
+        "library/doboto_certificate.py",
         "library/doboto_domain.py",
         "library/doboto_droplet.py",
         "library/doboto_floating_ip.py",
@@ -30,6 +32,5 @@ setup(
         "library/doboto_snapshot.py",
         "library/doboto_ssh_key.py",
         "library/doboto_tag.py",
-        "library/doboto_volume.py"
     ])]
 )

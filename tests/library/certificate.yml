@@ -1,0 +1,94 @@
+- name: certificate | create
+  doboto_certificate:
+    token: "{{ lookup('env','DO_API_TOKEN') }}"
+    action: create
+    name: certificate-create
+    private_key: "{{ lookup('file', 'private.pem') }}"
+    leaf_certificate: "{{ lookup('file', 'public.pem') }}"
+    certificate_chain: "{{ lookup('file', 'public.pem') }}"
+  register: certificate_create
+
+- name: certificate | create | verify
+  assert:
+    that:
+      - "{{ certificate_create.changed }}"
+      - "{{ certificate_create.certificate.name == 'certificate-create' }}"
+      - "{{ certificate_create.certificate.sha1_fingerprint == '071cb94f0cc8514d024124708ee8b2687bd7d9d5' }}"
+    msg: "{{ certificate_create }}"
+
+- name: certificate | present | exists
+  doboto_certificate:
+    action: present
+    name: certificate-create
+    private_key: "{{ lookup('file', 'private.pem') }}"
+    leaf_certificate: "{{ lookup('file', 'public.pem') }}"
+    certificate_chain: "{{ lookup('file', 'public.pem') }}"
+  register: certificate_present_exists
+
+- name: certificate | present | simple | verify
+  assert:
+    that:
+      - "{{ not certificate_present_exists.changed }}"
+      - "{{ certificate_present_exists.certificate.name == 'certificate-create' }}"
+      - "{{ certificate_present_exists.certificate.sha1_fingerprint == '071cb94f0cc8514d024124708ee8b2687bd7d9d5' }}"
+    msg: "{{ certificate_present_exists }}"
+
+- name: certificate | present | new
+  doboto_certificate:
+    action: present
+    name: certificate-present
+    private_key: "{{ lookup('file', 'private.pem') }}"
+    leaf_certificate: "{{ lookup('file', 'public.pem') }}"
+    certificate_chain: "{{ lookup('file', 'public.pem') }}"
+  register: certificate_present_new
+
+- name: certificate | present | verify
+  assert:
+    that:
+      - "{{ certificate_present_new.changed }}"
+      - "{{ certificate_present_new.certificate.name == 'certificate-present' }}"
+      - "{{ certificate_present_new.certificate.sha1_fingerprint == '071cb94f0cc8514d024124708ee8b2687bd7d9d5' }}"
+    msg: "{{ certificate_present_new }}"
+
+- name: certificate | info
+  doboto_certificate:
+    action: info
+    id: "{{ certificate_create.certificate.id }}"
+  register: certificate_info
+
+- name: certificate | info | verify
+  assert:
+    that:
+      - "{{ not certificate_info.changed }}"
+      - "{{ certificate_info.certificate.name == 'certificate-create' }}"
+    msg: "{{ certificate_info }}"
+
+- name: certificate | list
+  doboto_certificate:
+    action: list
+  register: certificates_list
+
+- name: certificate | list | verify
+  assert:
+    that:
+      - "{{ not certificates_list.changed }}"
+      - "{{ certificates_list.certificates|length == 2 }}"
+      - "{{ certificates_list|json_query(certificate_create_query) == certificate_create.certificate.id }}"
+      - "{{ certificates_list|json_query(certificate_present_query) == certificate_present_new.certificate.id }}"
+    msg: "{{ certificates_list }}"
+  vars:
+    certificate_create_query: "certificates[?name=='certificate-create'].id | [0]"
+    certificate_present_query: "certificates[?name=='certificate-present'].id | [0]"
+
+- name: certificate | destroy
+  doboto_certificate:
+    action: destroy
+    id: "{{ certificate_create.certificate.id }}"
+  register: certificate_destroy
+
+- name: certificate | destroy | verify
+  assert:
+    that:
+      - "{{ certificate_destroy.changed }}"
+      - "{{ certificate_destroy.result is none }}"
+    msg: "{{ certificate_destroy }}"
