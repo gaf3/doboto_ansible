@@ -78,8 +78,8 @@ class DOBOTOModule(object):
         except DOBOTOPollingException as exception:
             self.module.fail_json(
                 msg=exception.message,
-                polling=exception.result,
-                error=exception.result
+                polling=exception.polling,
+                error=exception.error
             )
         except DOBOTOException as exception:
             self.module.fail_json(msg=exception.message, result=exception.result)

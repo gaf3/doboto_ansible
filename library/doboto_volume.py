@@ -241,10 +241,7 @@ class Volume(DOBOTOModule):
             region=self.module.params["region"]
         ))
 
-    @require("name")
-    @require("size_gigabytes")
-    @require("region", "snapshot_id")
-    def create(self):
+    def attribs(self):
 
         attribs = {
             "size_gigabytes": self.module.params["size_gigabytes"],
@@ -254,6 +251,15 @@ class Volume(DOBOTOModule):
         for param in ["region", "snapshot_id", "description"]:
             if self.module.params[param] is not None:
                 attribs[param] = self.module.params[param]
+
+        return attribs
+
+    @require("name")
+    @require("size_gigabytes")
+    @require("region", "snapshot_id")
+    def create(self):
+
+        attribs = self.attribs()
 
         self.module.exit_json(changed=True, volume=self.do.volume.create(
             attribs,
@@ -267,14 +273,7 @@ class Volume(DOBOTOModule):
     @require("region", "snapshot_id")
     def present(self):
 
-        attribs = {
-            "size_gigabytes": self.module.params["size_gigabytes"],
-            "name": self.module.params["name"]
-        }
-
-        for param in ["region", "snapshot_id", "description"]:
-            if self.module.params[param] is not None:
-                attribs[param] = self.module.params[param]
+        attribs = self.attribs()
 
         (volume, created) = self.do.volume.present(
             attribs,
