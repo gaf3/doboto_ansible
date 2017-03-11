@@ -78,6 +78,156 @@ options:
 '''
 
 EXAMPLES = '''
+- name: load_balancer | droplet | create
+  doboto_droplet:
+    action: create
+    names:
+      - droplet-create-01
+      - droplet-create-02
+      - droplet-create-03
+    region: nyc3
+    size: 1gb
+    image: ubuntu-14-04-x64
+    tags: yasss
+    wait: true
+  register: load_balancer_droplet_create
+
+- name: load_balancer | create | droplets
+  doboto_load_balancer:
+    token: "{{ lookup('env','DO_API_TOKEN') }}"
+    action: create
+    name: load-balancer-create-droplets
+    region: nyc3
+    droplet_ids: "{{ load_balancer_droplet_create.droplets[0].id }}"
+    forwarding_rules:
+      -
+        entry_protocol: https
+        entry_port: 443
+        target_protocol: https
+        target_port: 443
+        tls_passthrough: true
+    wait: true
+  register: load_balancer_create_droplets
+
+- name: load_balancer | present | droplets | exists
+  doboto_load_balancer:
+    action: present
+    name: load-balancer-create-droplets
+    region: nyc3
+    droplet_ids: "{{ load_balancer_droplet_create.droplets[0].id }}"
+    forwarding_rules:
+      -
+        entry_protocol: http
+        entry_port: 80
+        target_protocol: http
+        target_port: 80
+    wait: true
+  register: load_balancer_present_droplets
+
+- name: load_balancer | certificate
+  doboto_certificate:
+    action: create
+    name: load-balancer-certificate
+    private_key: "{{ lookup('file', 'private.pem') }}"
+    leaf_certificate: "{{ lookup('file', 'public.pem') }}"
+    certificate_chain: "{{ lookup('file', 'public.pem') }}"
+  register: load_balancer_certificate
+
+- name: load_balancer | present | tag | new
+  doboto_load_balancer:
+    action: present
+    name: load-balancer-present-tag
+    region: nyc3
+    tag: yasss
+    forwarding_rules:
+      -
+        certificate_id: "{{ load_balancer_certificate.certificate.id }}"
+        entry_protocol: https
+        entry_port: 443
+        target_protocol: https
+        target_port: 443
+    wait: true
+  register: load_balancer_present_tag
+
+- name: load_balancer | destroy
+  doboto_load_balancer:
+    action: destroy
+    id: "{{ load_balancer_present_tag.load_balancer.id }}"
+  register: load_balancer_destroy
+
+- name: load_balancer | list
+  doboto_load_balancer:
+    action: list
+  register: load_balancer_list
+
+- name: load_balancer | info
+  doboto_load_balancer:
+    action: info
+    id: "{{ load_balancer_create_droplets.load_balancer.id }}"
+  register: load_balancer_info
+
+- name: load_balancer | update | droplets
+  doboto_load_balancer:
+    action: update
+    id: "{{ load_balancer_create_droplets.load_balancer.id }}"
+    name: load-balancer-update-droplets
+    region: nyc3
+    algorithm: round_robin
+    health_check:
+      check_interval_seconds: 10
+      healthy_threshold: 5
+      path: "/"
+      port: 80
+      protocol: http
+      response_timeout_seconds: 5
+      unhealthy_threshold: 3
+    droplet_ids: "{{ load_balancer_droplet_create.droplets[1].id }}"
+    forwarding_rules:
+      -
+        entry_protocol: http
+        entry_port: 8080
+        target_protocol: http
+        target_port: 8080
+    wait: true
+  register: load_balancer_update_droplets
+
+- name: load_balancer | droplet_add
+  doboto_load_balancer:
+    action: droplet_add
+    id: "{{ load_balancer_create_droplets.load_balancer.id }}"
+    droplet_ids: "{{ load_balancer_droplet_create.droplets[2].id }}"
+  register: load_balancer_droplet_add
+
+- name: load_balancer | droplet_remove
+  doboto_load_balancer:
+    action: droplet_remove
+    id: "{{ load_balancer_create_droplets.load_balancer.id }}"
+    droplet_ids: "{{ load_balancer_droplet_create.droplets[1].id }}"
+  register: load_balancer_droplet_remove
+
+- name: load_balancer | forwarding_rule_add
+  doboto_load_balancer:
+    action: forwarding_rule_add
+    id: "{{ load_balancer_create_droplets.load_balancer.id }}"
+    forwarding_rules:
+      -
+        entry_protocol: http
+        entry_port: 80
+        target_protocol: http
+        target_port: 80
+  register: load_balancer_forwarding_rule_add
+
+- name: load_balancer | forwarding_rule_remove
+  doboto_load_balancer:
+    action: forwarding_rule_remove
+    id: "{{ load_balancer_create_droplets.load_balancer.id }}"
+    forwarding_rules:
+      -
+        entry_protocol: http
+        entry_port: 8080
+        target_protocol: http
+        target_port: 8080
+  register: load_balancer_forwarding_rule_remove
 '''
 
 
