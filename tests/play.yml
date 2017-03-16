@@ -45,6 +45,11 @@
 
   - block:
     - include: library/clear.yml
+    - include: library/load_balancer.yml
+    tags: load_balancer
+
+  - block:
+    - include: library/clear.yml
     - include: library/snapshot.yml
     tags: snapshot
 

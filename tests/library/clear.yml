@@ -3,22 +3,22 @@
     action: info
   register: account_info
 
-- name: cleare| account | verify
+- name: clear | account | verify
   assert:
     that:
       - "{{ account_info.account.uuid == 'b60c5d2212bf79e1a2bb0e3c1b2ae30a617fb796' }}"
     msg: "{{ account_info }}"
 
-- name: clear | certificate | list
-  doboto_certificate:
+- name: clear | load_balancer | list
+  doboto_load_balancer:
     action: list
-  register: clear_certificate_list
+  register: clear_load_balancer_list
 
-- name: clear | certificate | destroy
-  doboto_certificate:
+- name: clear | load_balancer | destroy
+  doboto_load_balancer:
     action: destroy
     id: "{{ item.id }}"
-  with_items: "{{ clear_certificate_list.certificates }}"
+  with_items: "{{ clear_load_balancer_list.load_balancers }}"
   ignore_errors: yes
 
 - name: clear | domain | list
@@ -134,3 +134,15 @@
     action: destroy
     name: "{{ item.name }}"
   with_items: "{{ clear_tag_list.tags }}"
+
+- name: clear | certificate | list
+  doboto_certificate:
+    action: list
+  register: clear_certificate_list
+
+- name: clear | certificate | destroy
+  doboto_certificate:
+    action: destroy
+    id: "{{ item.id }}"
+  with_items: "{{ clear_certificate_list.certificates }}"
+  ignore_errors: yes

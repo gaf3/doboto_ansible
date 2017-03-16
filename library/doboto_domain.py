@@ -151,7 +151,6 @@ class Domain(DOBOTOModule):
                 "create",
                 "present",
                 "info",
-                "update",
                 "destroy",
                 "record_list",
                 "record_create",
@@ -193,14 +192,14 @@ class Domain(DOBOTOModule):
     @require("name")
     def info(self):
         self.module.exit_json(changed=False, domain=self.do.domain.info(
-            self.module.params["name"])
-        )
+            self.module.params["name"]
+        ))
 
     @require("name")
     def destroy(self):
         self.module.exit_json(changed=True, result=self.do.domain.destroy(
-            self.module.params["name"])
-        )
+            self.module.params["name"]
+        ))
 
     @require("name")
     def record_list(self):

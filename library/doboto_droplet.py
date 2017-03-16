@@ -357,11 +357,7 @@ class Droplet(DOBOTOModule):
             )}
         )
 
-    @require("name", "names")
-    @require("region")
-    @require("size")
-    @require("image")
-    def create(self):
+    def attribs(self):
 
         attribs = {
             "region": self.module.params["region"],
@@ -377,6 +373,16 @@ class Droplet(DOBOTOModule):
 
         if self.module.params['extra'] is not None:
             attribs.update(self.module.params['extra'])
+
+        return attribs
+
+    @require("name", "names")
+    @require("region")
+    @require("size")
+    @require("image")
+    def create(self):
+
+        attribs = self.attribs()
 
         if self.module.params["name"] is not None:
 
@@ -406,20 +412,7 @@ class Droplet(DOBOTOModule):
     @require("image")
     def present(self):
 
-        attribs = {
-            "region": self.module.params["region"],
-            "size": self.module.params["size"],
-            "image": self.module.params["image"],
-        }
-
-        for optional in [
-            'ssh_keys', 'volume', 'tags', 'backups', 'ipv6',
-            'private_networking', 'user_data', 'monitoring'
-        ]:
-            attribs[optional] = self.module.params[optional]
-
-        if self.module.params['extra'] is not None:
-            attribs.update(self.module.params['extra'])
+        attribs = self.attribs()
 
         if self.module.params["name"] is not None:
 
