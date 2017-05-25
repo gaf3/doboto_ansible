@@ -1,13 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import time
-import copy
-from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.doboto_module import require, DOBOTOModule
-
 """
-Ansible module to manage DigitalOcean droplets
 (c) 2017, SWE Data <swe-data@do.co>
 
 This file is part of Ansible
@@ -25,14 +19,22 @@ You should have received a copy of the GNU General Public License
 along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+ANSIBLE_METADATA = {'metadata_version': '1.0',
+                    'status': ['preview'],
+                    'supported_by': 'community'}
+
 DOCUMENTATION = '''
 ---
 module: doboto_droplet
 
 short_description: Manage DigitalOcean droplets
 description: Manages DigitalOcean droplets
-version_added: "0.1"
-author: "SWE Data <swe-data@do.co>"
+version_added: "2.4"
+author:
+  - "Gaffer Fitch (@gaf3)"
+  - "Ben Mildren (@bmildren)"
+  - "Cole Tuininga (@egon1024)"
+  - "Josh Bradley (@aww-yiss)"
 options:
     token:
         description: token to use to connect to the API (uses DO_API_TOKEN from ENV if not found)
@@ -244,92 +246,122 @@ EXAMPLES = '''
   register: multiple_power_off
 '''
 
+RETURNS = '''
+
+'''
+
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.digitalocean_doboto import DOBOTOModule
 
 class Droplet(DOBOTOModule):
 
     def input(self):
 
-        return AnsibleModule(argument_spec=dict(
-            action=dict(default=None, required=True, choices=[
-                "list",
-                "neighbor_list",
-                "droplet_neighbor_list",
-                "create",
-                "present",
-                "info",
-                "destroy",
-                "backup_list",
-                "backup_enable",
-                "backup_disable",
-                "reboot",
-                "shutdown",
-                "power_on",
-                "power_off",
-                "power_cycle",
-                "restore",
-                "password_reset",
-                "resize",
-                "rebuild",
-                "rename",
-                "kernel_list",
-                "kernel_update",
-                "ipv6_enable",
-                "private_networking_enable",
-                "snapshot_list",
-                "snapshot_create",
-                "action_list",
-                "action_info",
-            ]),
-            token=dict(default=None, no_log=True),
-            id=dict(default=None),
-            name=dict(default=None),
-            names=dict(default=None, type='list'),
-            region=dict(default=None),
-            size=dict(default=None),
-            disk=dict(default=None, type='bool'),
-            image=dict(default=None),
-            kernel=dict(default=None),
-            ssh_keys=dict(default=None, type='list'),
-            backups=dict(default=False, type='bool'),
-            ipv6=dict(default=False, type='bool'),
-            private_networking=dict(type='bool'),
-            user_data=dict(default=False),
-            monitoring=dict(type='bool'),
-            volume=dict(default=None, type='list'),
-            tags=dict(type='list'),
-            tag_name=dict(default=None),
-            snapshot_name=dict(default=None),
-            wait=dict(default=False, type='bool'),
-            poll=dict(default=5, type='int'),
-            timeout=dict(default=300, type='int'),
-            action_id=dict(default=None),
-            url=dict(default=self.url),
-            extra=dict(default=None, type='dict'),
-        ))
+        argument_spec = self.argument_spec()
+
+        argument_spec.update(
+            dict(
+                url=dict(default=self.url),
+                action=dict(required=True, default="list", choices=[
+                    "list",
+                    "neighbor_list",
+                    "droplet_neighbor_list",
+                    "create",
+                    "present",
+                    "info",
+                    "destroy",
+                    "backup_list",
+                    "backup_enable",
+                    "backup_disable",
+                    "reboot",
+                    "shutdown",
+                    "power_on",
+                    "power_off",
+                    "power_cycle",
+                    "restore",
+                    "password_reset",
+                    "resize",
+                    "rebuild",
+                    "rename",
+                    "kernel_list",
+                    "kernel_update",
+                    "ipv6_enable",
+                    "private_networking_enable",
+                    "snapshot_list",
+                    "snapshot_create",
+                    "action_list",
+                    "action_info",
+                ]),
+                id=dict(default=None),
+                name=dict(default=None),
+                names=dict(default=None, type="list"),
+                region=dict(default=None),
+                size=dict(default=None),
+                disk=dict(default=None, type="bool"),
+                image=dict(default=None),
+                kernel=dict(default=None),
+                ssh_keys=dict(default=None, type="list"),
+                backups=dict(default=False, type="bool"),
+                ipv6=dict(default=False, type="bool"),
+                private_networking=dict(type="bool"),
+                user_data=dict(default=False),
+                monitoring=dict(type="bool"),
+                volume=dict(default=None, type="list"),
+                tags=dict(type="list"),
+                tag_name=dict(default=None),
+                snapshot_name=dict(default=None),
+                wait=dict(default=False, type="bool"),
+                poll=dict(default=5, type="int"),
+                timeout=dict(default=300, type="int"),
+                action_id=dict(default=None),
+                extra=dict(default=None, type="dict")
+            )
+        )
+
+        return AnsibleModule(
+            argument_spec=argument_spec,
+            required_if=[
+                ["action", "list_action", ["id"]],
+                ["action", "create", ["name", "names"], True],
+                ["action", "create", ["region", "size", "image"]],
+                ["action", "present", ["name", "names"], True],
+                ["action", "present", ["region", "size", "image"]],
+                ["action", "info", ["id"]],
+                ["action", "destroy", ["id", "tag_name"]],
+                ["action", "restore", ["id", "image"]],
+                ["action", "resize", ["id", "size"]],
+                ["action", "rebuild", ["id", "image"]],
+                ["action", "rename", ["id", "name"]],
+                ["action", "kernel_update", ["id", "kernel"]],
+                ["action", "snapshot_create", ["id", "tag_name"], True],
+                ["action", "snapshot_create", ["snapshot_name"]],
+                ["action", "action_info", ["id", "action_id"]]
+            ]
+        )
 
     def act(self):
 
         if self.module.params["action"] in [
-            "kernel_list",
-            "snapshot_list",
-            "backup_list",
-            "action_list"
+                "kernel_list",
+                "snapshot_list",
+                "backup_list",
+                "action_list"
         ]:
             self.list_action(self.module.params["action"].replace('_list', 's'))
         elif self.module.params["action"] in [
-            "backup_enable",
-            "backup_disable",
-            "shutdown",
-            "power_cycle",
-            "power_on",
-            "power_off",
-            "private_networking_enable",
-            "ipv6_enable"
+                "backup_enable",
+                "backup_disable",
+                "shutdown",
+                "power_cycle",
+                "power_on",
+                "power_off",
+                "private_networking_enable",
+                "ipv6_enable"
         ]:
             self.action()
         elif self.module.params["action"] in [
-            "reboot",
-            "password_reset"
+                "reboot",
+                "password_reset"
         ]:
             self.action(tagless=True)
         elif self.module.params["action"] == "neighbor_list":
@@ -338,23 +370,31 @@ class Droplet(DOBOTOModule):
             getattr(self, self.module.params["action"])()
 
     def list(self):
-        self.module.exit_json(changed=False, droplets=self.do.droplet.list(
-            tag_name=self.module.params["tag_name"])
+
+        self.module.exit_json(
+            changed=False,
+            droplets=self.do.droplet.list(
+                tag_name=self.module.params["tag_name"]
+            )
         )
 
     def droplet_neighbor_list(self):
-        self.module.exit_json(changed=False, neighbors=self.do.droplet.droplet_neighbor_list())
 
-    @require("id")
+        self.module.exit_json(
+            changed=False,
+            neighbors=self.do.droplet.droplet_neighbor_list()
+        )
+
     def list_action(self, key=None):
 
         if key is None:
             key = self.module.params["action"]
 
-        self.module.exit_json(changed=False,
-            **{key: getattr(self.do.droplet, self.module.params["action"])(
-               self.module.params["id"]
-            )}
+        self.module.exit_json(
+            changed=False,
+            **{key:
+               getattr(self.do.droplet, self.module.params["action"])(self.module.params["id"])
+               }
         )
 
     def attribs(self):
@@ -366,8 +406,8 @@ class Droplet(DOBOTOModule):
         }
 
         for optional in [
-            'ssh_keys', 'volume', 'tags', 'backups', 'ipv6',
-            'private_networking', 'user_data', 'monitoring'
+                'ssh_keys', 'volume', 'tags', 'backups', 'ipv6',
+                'private_networking', 'user_data', 'monitoring'
         ]:
             attribs[optional] = self.module.params[optional]
 
@@ -376,10 +416,6 @@ class Droplet(DOBOTOModule):
 
         return attribs
 
-    @require("name", "names")
-    @require("region")
-    @require("size")
-    @require("image")
     def create(self):
 
         attribs = self.attribs()
@@ -393,7 +429,11 @@ class Droplet(DOBOTOModule):
                 self.module.params["poll"],
                 self.module.params["timeout"]
             )
-            self.module.exit_json(changed=True, droplet=droplet)
+
+            self.module.exit_json(
+                changed=True,
+                droplet=droplet
+            )
 
         elif self.module.params["names"] is not None:
 
@@ -404,12 +444,12 @@ class Droplet(DOBOTOModule):
                 self.module.params["poll"],
                 self.module.params["timeout"]
             )
-            self.module.exit_json(changed=True, droplets=droplets)
 
-    @require("name", "names")
-    @require("region")
-    @require("size")
-    @require("image")
+            self.module.exit_json(
+                changed=True,
+                droplets=droplets
+            )
+
     def present(self):
 
         attribs = self.attribs()
@@ -423,7 +463,12 @@ class Droplet(DOBOTOModule):
                 poll=self.module.params["poll"],
                 timeout=self.module.params["timeout"]
             )
-            self.module.exit_json(changed=(created is not None), droplet=droplet, created=created)
+
+            self.module.exit_json(
+                changed=(created is not None),
+                droplet=droplet,
+                created=created
+            )
 
         elif self.module.params["names"] is not None:
 
@@ -434,19 +479,29 @@ class Droplet(DOBOTOModule):
                 poll=self.module.params["poll"],
                 timeout=self.module.params["timeout"]
             )
-            self.module.exit_json(changed=(len(created) > 0), droplets=droplets, created=created)
 
-    @require("id")
+            self.module.exit_json(
+                changed=(len(created) > 0),
+                droplets=droplets,
+                created=created
+            )
+
     def info(self):
-        self.module.exit_json(changed=False, droplet=self.do.droplet.info(
-            self.module.params["id"]
-        ))
+        self.module.exit_json(
+            changed=False,
+            droplet=self.do.droplet.info(
+                self.module.params["id"]
+            )
+        )
 
-    @require("id", "tag_name")
     def destroy(self):
-        self.module.exit_json(changed=True, result=self.do.droplet.destroy(
-            id=self.module.params["id"], tag_name=self.module.params["tag_name"]
-        ))
+        self.module.exit_json(
+            changed=True,
+            result=self.do.droplet.destroy(
+                id=self.module.params["id"],
+                tag_name=self.module.params["tag_name"]
+            )
+        )
 
     def action(self, tagless=False):
 
@@ -478,75 +533,88 @@ class Droplet(DOBOTOModule):
 
             self.module.fail_json(msg="the id or tag_name parameter is required")
 
-    @require("id")
-    @require("image")
     def restore(self):
-        self.module.exit_json(changed=True, action=self.do.droplet.restore(
-            self.module.params["id"], self.module.params["image"],
-            wait=self.module.params["wait"],
-            poll=self.module.params["poll"],
-            timeout=self.module.params["timeout"]
-        ))
+        self.module.exit_json(
+            changed=True,
+            action=self.do.droplet.restore(
+                self.module.params["id"],
+                self.module.params["image"],
+                wait=self.module.params["wait"],
+                poll=self.module.params["poll"],
+                timeout=self.module.params["timeout"]
+            )
+        )
 
-    @require("id")
-    @require("size")
     def resize(self):
-        self.module.exit_json(changed=True, action=self.do.droplet.resize(
-            self.module.params["id"], self.module.params["size"], self.module.params["disk"],
-            wait=self.module.params["wait"],
-            poll=self.module.params["poll"],
-            timeout=self.module.params["timeout"]
-        ))
+        self.module.exit_json(
+            changed=True,
+            action=self.do.droplet.resize(
+                self.module.params["id"],
+                self.module.params["size"],
+                self.module.params["disk"],
+                wait=self.module.params["wait"],
+                poll=self.module.params["poll"],
+                timeout=self.module.params["timeout"]
+            )
+        )
 
-    @require("id")
-    @require("image")
     def rebuild(self):
-        self.module.exit_json(changed=True, action=self.do.droplet.rebuild(
-            self.module.params["id"], self.module.params["image"],
-            wait=self.module.params["wait"],
-            poll=self.module.params["poll"],
-            timeout=self.module.params["timeout"]
-        ))
+        self.module.exit_json(
+            changed=True,
+            action=self.do.droplet.rebuild(
+                self.module.params["id"],
+                self.module.params["image"],
+                wait=self.module.params["wait"],
+                poll=self.module.params["poll"],
+                timeout=self.module.params["timeout"]
+            )
+        )
 
-    @require("id")
-    @require("name")
     def rename(self):
-        self.module.exit_json(changed=True, action=self.do.droplet.rename(
-            self.module.params["id"], self.module.params["name"],
-            wait=self.module.params["wait"],
-            poll=self.module.params["poll"],
-            timeout=self.module.params["timeout"]
-        ))
+        self.module.exit_json(
+            changed=True,
+            action=self.do.droplet.rename(
+                self.module.params["id"],
+                self.module.params["name"],
+                wait=self.module.params["wait"],
+                poll=self.module.params["poll"],
+                timeout=self.module.params["timeout"]
+            )
+        )
 
-    @require("id")
-    @require("kernel")
     def kernel_update(self):
-        self.module.exit_json(changed=True, action=self.do.droplet.kernel_update(
-            self.module.params["id"], self.module.params["kernel"],
-            wait=self.module.params["wait"],
-            poll=self.module.params["poll"],
-            timeout=self.module.params["timeout"]
-        ))
+        self.module.exit_json(
+            changed=True,
+            action=self.do.droplet.kernel_update(
+                self.module.params["id"],
+                self.module.params["kernel"],
+                wait=self.module.params["wait"],
+                poll=self.module.params["poll"],
+                timeout=self.module.params["timeout"]
+            )
+        )
 
-    @require("id", "tag_name")
-    @require("snapshot_name")
     def snapshot_create(self):
-        self.module.exit_json(changed=True, action=self.do.droplet.snapshot_create(
-            id=self.module.params["id"],
-            tag_name=self.module.params["tag_name"],
-            snapshot_name=self.module.params["snapshot_name"],
-            wait=self.module.params["wait"],
-            poll=self.module.params["poll"],
-            timeout=self.module.params["timeout"]
-        ))
+        self.module.exit_json(
+            changed=True,
+            action=self.do.droplet.snapshot_create(
+                id=self.module.params["id"],
+                tag_name=self.module.params["tag_name"],
+                snapshot_name=self.module.params["snapshot_name"],
+                wait=self.module.params["wait"],
+                poll=self.module.params["poll"],
+                timeout=self.module.params["timeout"]
+            )
+        )
 
-    @require("id")
-    @require("action_id")
     def action_info(self):
-        self.module.exit_json(changed=False, action=self.do.droplet.action_info(
-            self.module.params["id"], self.module.params["action_id"]
-        ))
-
+        self.module.exit_json(
+            changed=False,
+            action=self.do.droplet.action_info(
+                self.module.params["id"],
+                self.module.params["action_id"]
+            )
+        )
 
 if __name__ == '__main__':
     Droplet()

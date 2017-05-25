@@ -2,11 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import os
-import time
-from ansible.module_utils.basic import AnsibleModule
 
 """
-Ansible util for DigitalOcean DOBOTO modules
 (c) 2017, SWE Data <swe-data@do.co>
 
 This file is part of Ansible
@@ -32,23 +29,6 @@ except:
     HAS_DOBOTO = False
 
 
-def require(*required):
-    def requirer(function):
-        def wrapper(*args, **kwargs):
-            params = required
-            if not isinstance(params, tuple):
-                params = (params,)
-            met = False
-            for param in params:
-                if args[0].module.params[param] is not None:
-                    met = True
-            if not met:
-                args[0].module.fail_json(msg="the %s parameter is required" % " or ".join(params))
-            function(*args, **kwargs)
-        return wrapper
-    return requirer
-
-
 class DOBOTOModule(object):
 
     url = "https://api.digitalocean.com/v2"
@@ -69,7 +49,9 @@ class DOBOTOModule(object):
         if token is None:
             self.module.fail_json(msg="the token parameter is required")
 
-        self.do = DO(token=token, url=self.module.params["url"], agent=self.agent)
+        self.do = DO(token=token,
+                     url=self.module.params["url"],
+                     agent=self.agent)
 
         try:
             self.act()
@@ -82,7 +64,17 @@ class DOBOTOModule(object):
                 error=exception.error
             )
         except DOBOTOException as exception:
-            self.module.fail_json(msg=exception.message, result=exception.result)
+            self.module.fail_json(msg=exception.message,
+                                  result=exception.result)
 
     def act(self):
+
         getattr(self, self.module.params["action"])()
+
+    @staticmethod
+    def argument_spec():
+
+        return dict(
+            url=dict(required=True, default=self.url),
+            token=dict(required=True, default=None, no_log=True)
+        )

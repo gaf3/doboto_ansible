@@ -1,11 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.doboto_module import DOBOTOModule
-
 """
-Ansible module to manage DigitalOcean regions
 (c) 2017, SWE Data <swe-data@do.co>
 
 This file is part of Ansible
@@ -23,14 +19,22 @@ You should have received a copy of the GNU General Public License
 along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+ANSIBLE_METADATA = {'metadata_version': '1.0',
+                    'status': ['preview'],
+                    'supported_by': 'community'}
+
 DOCUMENTATION = '''
 ---
 module: doboto_region
 
 short_description: Manage DigitalOcean Regions
 description: Manages DigitalOcean regions
-version_added: "0.1"
-author: "SWE Data <swe-data@do.co>"
+version_added: "2.4"
+author:
+  - "Gaffer Fitch (@gaf3)"
+  - "Ben Mildren (@bmildren)"
+  - "Cole Tuininga (@egon1024)"
+  - "Josh Bradley (@aww-yiss)"
 options:
     token:
         description: token to use to connect to the API (uses DO_API_TOKEN from ENV if not found)
@@ -49,22 +53,38 @@ EXAMPLES = '''
   register: region_list
 '''
 
+RETURNS = '''
+
+'''
+
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.digitalocean_doboto import DOBOTOModule
 
 class Region(DOBOTOModule):
 
     def input(self):
 
-        return AnsibleModule(argument_spec=dict(
-            action=dict(default=None, required=True, choices=[
-                "list"
-            ]),
-            token=dict(default=None, no_log=True),
-            url=dict(default=self.url)
-        ))
+        argument_spec = self.argument_spec()
+
+        argument_spec.update(
+            dict(
+                action=dict(required=True, default="list", choices=[
+                    "list"
+                ])
+            )
+        )
+
+        return AnsibleModule(
+            argument_spec=argument_spec,
+            supports_check_mode=True
+        )
 
     def list(self):
-        self.module.exit_json(changed=False, regions=self.do.region.list())
 
+        self.module.exit_json(
+            changed=False,
+            regions=self.do.region.list()
+        )
 
 if __name__ == '__main__':
     Region()

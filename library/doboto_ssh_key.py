@@ -1,11 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.doboto_module import require, DOBOTOModule
-
 """
-Ansible module to manage DigitalOcean ssh keys
 (c) 2017, SWE Data <swe-data@do.co>
 
 This file is part of Ansible
@@ -23,14 +19,22 @@ You should have received a copy of the GNU General Public License
 along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+ANSIBLE_METADATA = {'metadata_version': '1.0',
+                    'status': ['preview'],
+                    'supported_by': 'community'}
+
 DOCUMENTATION = '''
 ---
 module: doboto_ssh_key
 
 short_description: Manage DigitalOcean SSH Keys
 description: Manages DigitalOcean ssh keys
-version_added: "0.1"
-author: "SWE Data <swe-data@do.co>"
+version_added: "2.4"
+author:
+  - "Gaffer Fitch (@gaf3)"
+  - "Ben Mildren (@bmildren)"
+  - "Cole Tuininga (@egon1024)"
+  - "Josh Bradley (@aww-yiss)"
 options:
     token:
         description: token to use to connect to the API (uses DO_API_TOKEN from ENV if not found)
@@ -109,61 +113,105 @@ EXAMPLES = '''
   register: ssh_key_id_destroy
 '''
 
+RETURNS = '''
+
+'''
+
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.digitalocean_doboto import DOBOTOModule
 
 class SSHKey(DOBOTOModule):
 
     def input(self):
 
-        return AnsibleModule(argument_spec=dict(
-            action=dict(default=None, required=True, choices=[
-                "create", "present", "list", "info", "update", "destroy"
-            ]),
-            token=dict(default=None, no_log=True),
-            id=dict(default=None),
-            fingerprint=dict(default=None),
-            public_key=dict(default=None),
-            name=dict(default=None),
-            url=dict(default=self.url),
-        ))
+        argument_spec = self.argument_spec()
+
+        argument_spec.update(
+            dict(
+                action=dict(required=True, default="list", choices=[
+                    "list",
+                    "info",
+                    "create",
+                    "present",
+                    "update",
+                    "destroy"
+                ]),
+                id=dict(default=None),
+                fingerprint=dict(default=None),
+                public_key=dict(default=None),
+                name=dict(default=None),
+            )
+        )
+
+        return AnsibleModule(
+            argument_spec=argument_spec,
+            required_if=[
+                ["action", "create", ["name", "public_key"]],
+                ["action", "present", ["name", "public_key"]],
+                ["action", "info", ["id", "fingerprint"], True],
+                ["action", "update", ["id", "fingerprint"], True],
+                ["action", "update", ["name"]],
+                ["action", "destroy", ["id", "fingerprint"], True]
+            ]
+        )
 
     def list(self):
-        self.module.exit_json(changed=False, ssh_keys=self.do.ssh_key.list())
 
-    @require("name")
-    @require("public_key")
-    def create(self):
-        self.module.exit_json(changed=True, ssh_key=self.do.ssh_key.create(
-            self.module.params["name"], self.module.params["public_key"]
-        ))
-
-    @require("name")
-    @require("public_key")
-    def present(self):
-        (ssh_key, created) = self.do.ssh_key.present(
-            self.module.params["name"], self.module.params["public_key"]
+        self.module.exit_json(
+            changed=False,
+            ssh_keys=self.do.ssh_key.list()
         )
-        self.module.exit_json(changed=(created is not None), ssh_key=ssh_key, created=created)
 
-    @require("id", "fingerprint")
+    def create(self):
+
+        self.module.exit_json(
+            changed=True,
+            ssh_key=self.do.ssh_key.create(
+                self.module.params["name"],
+                self.module.params["public_key"]
+            )
+        )
+
+    def present(self):
+
+        (ssh_key, created) = self.do.ssh_key.present(
+            self.module.params["name"],
+            self.module.params["public_key"]
+        )
+
+        self.module.exit_json(
+            changed=(created is not None),
+            ssh_key=ssh_key,
+            created=created
+        )
+
     def info(self):
-        self.module.exit_json(changed=False, ssh_key=self.do.ssh_key.info(
-            self.module.params["id"] or self.module.params["fingerprint"]
-        ))
 
-    @require("id", "fingerprint")
-    @require("name")
+        self.module.exit_json(
+            changed=False,
+            ssh_key=self.do.ssh_key.info(
+                self.module.params["id"] or self.module.params["fingerprint"]
+            )
+        )
+
     def update(self):
-        self.module.exit_json(changed=True, ssh_key=self.do.ssh_key.update(
-            self.module.params["id"] or self.module.params["fingerprint"],
-            self.module.params["name"]
-        ))
 
-    @require("id", "fingerprint")
+        self.module.exit_json(
+            changed=True,
+            ssh_key=self.do.ssh_key.update(
+                self.module.params["id"] or self.module.params["fingerprint"],
+                self.module.params["name"]
+            )
+        )
+
     def destroy(self):
-        self.module.exit_json(changed=True, result=self.do.ssh_key.destroy(
-            self.module.params["id"] or self.module.params["fingerprint"]
-        ))
 
+        self.module.exit_json(
+            changed=True,
+            result=self.do.ssh_key.destroy(
+                self.module.params["id"] or self.module.params["fingerprint"]
+            )
+        )
 
 if __name__ == '__main__':
     SSHKey()

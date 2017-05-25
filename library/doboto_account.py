@@ -1,12 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.doboto_module import DOBOTOModule
-
 """
-Ansible module to manage DigitalOcean account
-(c) 2017, SWE Data <swe-data@do.co>
+(c) 2017, DigitalOcean, SWE Data <swe-data@do.co>
 
 This file is part of Ansible
 
@@ -23,23 +19,27 @@ You should have received a copy of the GNU General Public License
 along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+ANSIBLE_METADATA = {'metadata_version': '1.0',
+                    'status': ['preview'],
+                    'supported_by': 'community'}
+
 DOCUMENTATION = '''
 ---
 module: doboto_account
-
 short_description: Manage DigitalOcean Account
 description: Manages DigitalOcean account
-version_added: "0.1"
-author: "SWE Data <swe-data@do.co>"
+version_added: "2.4"
+author:
+  - "Gaffer Fitch (@gaf3)"
+  - "Ben Mildren (@bmildren)"
+  - "Cole Tuininga (@egon1024)"
+  - "Josh Bradley (@aww-yiss)"
 options:
-    token:
-        description: token to use to connect to the API (uses DO_API_TOKEN from ENV if not found)
     action:
         description: account action
         choices:
             - info
-    url:
-        description: URL to use if not official (for experimenting)
+extends_documentation_fragment: digitalocean_doboto
 '''
 
 EXAMPLES = '''
@@ -49,20 +49,37 @@ EXAMPLES = '''
   register: account_info
 '''
 
+RETURNS = '''
+
+'''
+
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.digitalocean_doboto import DOBOTOModule
 
 class Account(DOBOTOModule):
 
     def input(self):
 
-        return AnsibleModule(argument_spec=dict(
-            token=dict(default=None, no_log=True),
-            action=dict(default=None),
-            url=dict(default=self.url),
-        ))
+        argument_spec = self.argument_spec()
+
+        argument_spec.update(
+            dict(
+                action=dict(required=True, default="info", choices=[
+                    "info"])
+            )
+        )
+
+        return AnsibleModule(
+            argument_spec=argument_spec,
+            supports_check_mode=True
+        )
 
     def info(self):
-        self.module.exit_json(changed=False, account=self.do.account.info())
 
+        self.module.exit_json(
+            changed=False,
+            account=self.do.account.info()
+        )
 
 if __name__ == '__main__':
     Account()

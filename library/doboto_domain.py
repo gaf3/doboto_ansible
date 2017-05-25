@@ -1,11 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.doboto_module import require, DOBOTOModule
-
 """
-Ansible module to manage DigitalOcean domains
 (c) 2017, SWE Data <swe-data@do.co>
 
 This file is part of Ansible
@@ -23,14 +19,22 @@ You should have received a copy of the GNU General Public License
 along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+ANSIBLE_METADATA = {'metadata_version': '1.0',
+                    'status': ['preview'],
+                    'supported_by': 'community'}
+
 DOCUMENTATION = '''
 ---
 module: doboto_domain
 
 short_description: Manage DigitalOcean domains
 description: Manages DigitalOcean Domains
-version_added: "0.1"
-author: "SWE Data <swe-data@do.co>"
+version_added: "2.4"
+author:
+  - "Gaffer Fitch (@gaf3)"
+  - "Ben Mildren (@bmildren)"
+  - "Cole Tuininga (@egon1024)"
+  - "Josh Bradley (@aww-yiss)"
 options:
     token:
         description: token to use to connect to the API (uses DO_API_TOKEN from ENV if not found)
@@ -141,127 +145,178 @@ EXAMPLES = '''
 
 '''
 
+RETURNS = '''
+
+'''
+
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.digitalocean_doboto import DOBOTOModule
 
 class Domain(DOBOTOModule):
 
     def input(self):
-        return AnsibleModule(argument_spec=dict(
-            action=dict(default=None, required=True, choices=[
-                "list",
-                "create",
-                "present",
-                "info",
-                "destroy",
-                "record_list",
-                "record_create",
-                "record_info",
-                "record_update",
-                "record_destroy"
-            ]),
-            token=dict(default=None, no_log=True),
-            name=dict(default=None),
-            ip_address=dict(default=None),
-            record_id=dict(default=None),
-            record_type=dict(default=None),
-            record_name=dict(default=None),
-            record_data=dict(default=None),
-            record_priority=dict(default=None),
-            record_port=dict(default=None),
-            record_weight=dict(default=None),
-            url=dict(default=self.url)
-        ))
+
+        argument_spec = self.argument_spec()
+
+        argument_spec.update(
+            dict(
+                action=dict(required=True, default="list", choices=[
+                    "list",
+                    "create",
+                    "present",
+                    "info",
+                    "destroy",
+                    "record_list",
+                    "record_create",
+                    "record_info",
+                    "record_update",
+                    "record_destroy"
+                ]),
+                name=dict(default=None),
+                ip_address=dict(default=None),
+                record_id=dict(default=None),
+                record_type=dict(default=None),
+                record_name=dict(default=None),
+                record_data=dict(default=None),
+                record_priority=dict(default=None),
+                record_port=dict(default=None),
+                record_weight=dict(default=None)
+            )
+        )
+
+        return AnsibleModule(
+            argument_spec=argument_spec,
+            required_if=[
+                ["action", "create", ["name", "ip_address"]],
+                ["action", "present", ["name", "ip_address"]],
+                ["action", "info", ["name"]],
+                ["action", "destroy", ["name"]],
+                ["action", "record_list", ["name"]],
+                ["action", "record_create", ["name"]],
+                ["action", "record_info", ["name", "record_id"]],
+                ["action", "record_update", ["name", "record_id"]],
+                ["action", "record_destroy", ["name", "record_id"]]
+            ]
+        )
 
     def list(self):
-        self.module.exit_json(changed=False, domains=self.do.domain.list())
 
-    @require("name")
-    @require("ip_address")
-    def create(self):
-        self.module.exit_json(changed=True, domain=self.do.domain.create(
-            self.module.params["name"], self.module.params["ip_address"]
-        ))
-
-    @require("name")
-    @require("ip_address")
-    def present(self):
-        (domain, created) = self.do.domain.present(
-            self.module.params["name"], self.module.params["ip_address"]
+        self.module.exit_json(
+            changed=False,
+            domains=self.do.domain.list()
         )
-        self.module.exit_json(changed=(created is not None), domain=domain, created=created)
 
-    @require("name")
+    def create(self):
+
+        self.module.exit_json(
+            changed=True,
+            domain=self.do.domain.create(self.module.params["name"],
+                                         self.module.params["ip_address"])
+        )
+
+    def present(self):
+
+        (domain, created) = \
+            self.do.domain.present(self.module.params["name"],
+                                   self.module.params["ip_address"])
+
+        self.module.exit_json(
+            changed=(created is not None),
+            domain=domain,
+            created=created
+        )
+
     def info(self):
-        self.module.exit_json(changed=False, domain=self.do.domain.info(
-            self.module.params["name"]
-        ))
 
-    @require("name")
+        self.module.exit_json(
+            changed=False,
+            domain=self.do.domain.info(
+                self.module.params["name"]
+            )
+        )
+
     def destroy(self):
-        self.module.exit_json(changed=True, result=self.do.domain.destroy(
-            self.module.params["name"]
-        ))
 
-    @require("name")
+        self.module.exit_json(
+            changed=True,
+            result=self.do.domain.destroy(
+                self.module.params["name"]
+            )
+        )
+
     def record_list(self):
-        self.module.exit_json(changed=False, domain_records=self.do.domain.record_list(
-            self.module.params["name"]
-        ))
 
-    @require("name")
+        self.module.exit_json(
+            changed=False,
+            domain_records=self.do.domain.record_list(
+                self.module.params["name"]
+            )
+        )
+
     def record_create(self):
 
         attribs = {}
 
         for field in [
-            "type",
-            "name",
-            "data",
-            "priority",
-            "port",
-            "weight"
+                "type",
+                "name",
+                "data",
+                "priority",
+                "port",
+                "weight"
         ]:
             if self.module.params["record_%s" % field] is not None:
                 attribs[field] = self.module.params["record_%s" % field]
 
-        self.module.exit_json(changed=True, domain_record=self.do.domain.record_create(
-            self.module.params["name"], attribs
-        ))
+        self.module.exit_json(
+            changed=True,
+            domain_record=self.do.domain.record_create(
+                self.module.params["name"], attribs
+            )
+        )
 
-    @require("name")
-    @require("record_id")
     def record_info(self):
-        self.module.exit_json(changed=False, domain_record=self.do.domain.record_info(
-            self.module.params["name"], self.module.params["record_id"]
-        ))
 
-    @require("name")
-    @require("record_id")
+        self.module.exit_json(
+            changed=False,
+            domain_record=self.do.domain.record_info(
+                self.module.params["name"], self.module.params["record_id"]
+            )
+        )
+
     def record_update(self):
 
         attribs = {}
 
         for field in [
-            "type",
-            "name",
-            "data",
-            "priority",
-            "port",
-            "weight"
+                "type",
+                "name",
+                "data",
+                "priority",
+                "port",
+                "weight"
         ]:
             if self.module.params["record_%s" % field] is not None:
                 attribs[field] = self.module.params["record_%s" % field]
 
-        self.module.exit_json(changed=True, domain_record=self.do.domain.record_update(
-            self.module.params["name"], self.module.params["record_id"], attribs
-        ))
+        self.module.exit_json(
+            changed=True,
+            domain_record=self.do.domain.record_update(
+                self.module.params["name"],
+                self.module.params["record_id"],
+                attribs
+            )
+        )
 
-    @require("name")
-    @require("record_id")
     def record_destroy(self):
-        self.module.exit_json(changed=True, result=self.do.domain.record_destroy(
-            self.module.params["name"], self.module.params["record_id"]
-        ))
 
+        self.module.exit_json(
+            changed=True,
+            result=self.do.domain.record_destroy(
+                self.module.params["name"],
+                self.module.params["record_id"]
+            )
+        )
 
 if __name__ == '__main__':
     Domain()

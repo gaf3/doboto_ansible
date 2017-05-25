@@ -1,12 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import time
-from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.doboto_module import require, DOBOTOModule
-
 """
-Ansible module to manage DigitalOcean volumes
 (c) 2017, SWE Data <swe-data@do.co>
 
 This file is part of Ansible
@@ -24,14 +19,22 @@ You should have received a copy of the GNU General Public License
 along with Ansible.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+ANSIBLE_METADATA = {'metadata_version': '1.0',
+                    'status': ['preview'],
+                    'supported_by': 'community'}
+
 DOCUMENTATION = '''
 ---
 module: doboto_volume
 
 short_description: Manage DigitalOcean volumes
 description: Manages DigitalOcean Block Storage
-version_added: "0.1"
-author: "SWE Data <swe-data@do.co>"
+version_added: "2.4"
+author:
+  - "Gaffer Fitch (@gaf3)"
+  - "Ben Mildren (@bmildren)"
+  - "Cole Tuininga (@egon1024)"
+  - "Josh Bradley (@aww-yiss)"
 options:
     token:
         description: token to use to connect to the API (uses DO_API_TOKEN from ENV if not found)
@@ -200,46 +203,80 @@ EXAMPLES = '''
   register: volume_destroy_name_region
 '''
 
+RETURNS = '''
+
+'''
+
+from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.digitalocean_doboto import DOBOTOModule
 
 class Volume(DOBOTOModule):
 
     def input(self):
 
-        return AnsibleModule(argument_spec=dict(
-            action=dict(default=None, required=True, choices=[
-                "list",
-                "create",
-                "present",
-                "info",
-                "destroy",
-                "snapshot_list",
-                "snapshot_create",
-                "attach",
-                "detach",
-                "resize",
-                "action_list",
-                "action_info"
-            ]),
-            token=dict(default=None, no_log=True),
-            id=dict(default=None),
-            name=dict(default=None),
-            description=dict(default=None),
-            region=dict(default=None),
-            size_gigabytes=dict(default=None),
-            snapshot_id=dict(default=None),
-            snapshot_name=dict(default=None),
-            droplet_id=dict(default=None),
-            wait=dict(default=False, type='bool'),
-            poll=dict(default=5, type='int'),
-            timeout=dict(default=300, type='int'),
-            action_id=dict(default=None),
-            url=dict(default=self.url)
-        ))
+        argument_spec = self.argument_spec()
+
+        argument_spec.update(
+            dict(
+                action=dict(required=True, default="list", choices=[
+                    "list",
+                    "create",
+                    "present",
+                    "info",
+                    "destroy",
+                    "snapshot_list",
+                    "snapshot_create",
+                    "attach",
+                    "detach",
+                    "resize",
+                    "action_list",
+                    "action_info"
+                ]),
+                id=dict(default=None),
+                name=dict(default=None),
+                description=dict(default=None),
+                region=dict(default=None),
+                size_gigabytes=dict(default=None),
+                snapshot_id=dict(default=None),
+                snapshot_name=dict(default=None),
+                droplet_id=dict(default=None),
+                wait=dict(default=False, type='bool'),
+                poll=dict(default=5, type='int'),
+                timeout=dict(default=300, type='int'),
+                action_id=dict(default=None)
+            )
+        )
+
+        return AnsibleModule(
+            argument_spec=argument_spec,
+            required_if=[
+                ["action", "create", ["name", "size_gigabytes"]],
+                ["action", "create", ["region", "snapshot_id"], True],
+                ["action", "present", ["name", "size_gigabytes"]],
+                ["action", "present", ["region", "snapshot_id"], True],
+                ["action", "info", ["id", "name"], True],
+                ["action", "destroy", ["id", "name"], True],
+                ["action", "snapshot_list", ["id"]],
+                ["action", "snapshot_create", ["id", "snapshot_name"]],
+                ["action", "attach", ["id", "name"], True],
+                ["action", "attach", ["droplet_id"]],
+                ["action", "detach", ["id", "name"], True],
+                ["action", "detach", ["droplet_id"]],
+                ["action", "resize", ["id", "name"], True],
+                ["action", "resize", ["size_gigabytes"]]
+                ["action", "action_list", ["id"]],
+                ["action", "action_info", ["id", "action_id"]]
+            ]
+        )
 
     def list(self):
-        self.module.exit_json(changed=False, volumes=self.do.volume.list(
-            region=self.module.params["region"]
-        ))
+
+        self.module.exit_json(
+            changed=False,
+            volumes=self.do.volume.list(
+                region=self.module.params["region"]
+            )
+        )
 
     def attribs(self):
 
@@ -254,23 +291,20 @@ class Volume(DOBOTOModule):
 
         return attribs
 
-    @require("name")
-    @require("size_gigabytes")
-    @require("region", "snapshot_id")
     def create(self):
 
         attribs = self.attribs()
 
-        self.module.exit_json(changed=True, volume=self.do.volume.create(
-            attribs,
-            wait=self.module.params["wait"],
-            poll=self.module.params["poll"],
-            timeout=self.module.params["timeout"]
-        ))
+        self.module.exit_json(
+            changed=True,
+            volume=self.do.volume.create(
+                attribs,
+                wait=self.module.params["wait"],
+                poll=self.module.params["poll"],
+                timeout=self.module.params["timeout"]
+            )
+        )
 
-    @require("name")
-    @require("size_gigabytes")
-    @require("region", "snapshot_id")
     def present(self):
 
         attribs = self.attribs()
@@ -281,7 +315,12 @@ class Volume(DOBOTOModule):
             poll=self.module.params["poll"],
             timeout=self.module.params["timeout"]
         )
-        self.module.exit_json(changed=(created is not None), volume=volume, created=created)
+
+        self.module.exit_json(
+            changed=(created is not None),
+            volume=volume,
+            created=created
+        )
 
     def info(self):
 
@@ -289,18 +328,27 @@ class Volume(DOBOTOModule):
 
         if self.module.params["id"] is not None:
 
-            self.module.exit_json(changed=False, volume=self.do.volume.info(
-                id=self.module.params["id"]
-            ))
+            self.module.exit_json(
+                changed=False,
+                volume=self.do.volume.info(
+                    id=self.module.params["id"]
+                )
+            )
 
         elif self.module.params["name"] is not None and self.module.params["region"] is not None:
 
-            self.module.exit_json(changed=False, volume=self.do.volume.info(
-                name=self.module.params["name"], region=self.module.params["region"]
-            ))
+            self.module.exit_json(
+                changed=False,
+                volume=self.do.volume.info(
+                    name=self.module.params["name"],
+                    region=self.module.params["region"]
+                )
+            )
 
         else:
-            self.module.fail_json(msg="the id or name and region parameters are required")
+            self.module.fail_json(
+                msg="the id or name and region parameters are required"
+            )
 
     def destroy(self):
 
@@ -308,83 +356,108 @@ class Volume(DOBOTOModule):
 
         if self.module.params["id"] is not None:
 
-            result = self.do.volume.destroy(id=self.module.params["id"])
+            result = self.do.volume.destroy(
+                id=self.module.params["id"]
+            )
 
         elif self.module.params["name"] is not None and self.module.params["region"] is not None:
 
             result = self.do.volume.destroy(
-                name=self.module.params["name"], region=self.module.params["region"]
+                name=self.module.params["name"],
+                region=self.module.params["region"]
             )
 
         else:
-            self.module.fail_json(msg="the id or name and region parameters are required")
+            self.module.fail_json(
+                msg="the id or name and region parameters are required"
+            )
 
-        self.module.exit_json(changed=True, result=result)
+        self.module.exit_json(
+            changed=True,
+            result=result
+        )
 
-    @require("id")
     def snapshot_list(self):
-        self.module.exit_json(changed=False, snapshots=self.do.volume.snapshot_list(
-            id=self.module.params["id"]
-        ))
 
-    @require("id")
-    @require("snapshot_name")
+        self.module.exit_json(
+            changed=False,
+            snapshots=self.do.volume.snapshot_list(
+                id=self.module.params["id"]
+            )
+        )
+
     def snapshot_create(self):
-        self.module.exit_json(changed=True, snapshot=self.do.volume.snapshot_create(
-            id=self.module.params["id"], snapshot_name=self.module.params["snapshot_name"]
-        ))
 
-    @require("id", "name")
-    @require("droplet_id")
+        self.module.exit_json(
+            changed=True,
+            snapshot=self.do.volume.snapshot_create(
+                id=self.module.params["id"],
+                snapshot_name=self.module.params["snapshot_name"]
+            )
+        )
+
     def attach(self):
-        self.module.exit_json(changed=True, action=self.do.volume.attach(
-            id=self.module.params["id"],
-            name=self.module.params["name"],
-            droplet_id=self.module.params["droplet_id"],
-            region=self.module.params["region"],
-            wait=self.module.params["wait"],
-            poll=self.module.params["poll"],
-            timeout=self.module.params["timeout"]
-        ))
 
-    @require("id", "name")
-    @require("droplet_id")
+        self.module.exit_json(
+            changed=True,
+            action=self.do.volume.attach(
+                id=self.module.params["id"],
+                name=self.module.params["name"],
+                droplet_id=self.module.params["droplet_id"],
+                region=self.module.params["region"],
+                wait=self.module.params["wait"],
+                poll=self.module.params["poll"],
+                timeout=self.module.params["timeout"]
+            )
+        )
+
     def detach(self):
-        self.module.exit_json(changed=True, action=self.do.volume.detach(
-            id=self.module.params["id"],
-            name=self.module.params["name"],
-            droplet_id=self.module.params["droplet_id"],
-            region=self.module.params["region"],
-            wait=self.module.params["wait"],
-            poll=self.module.params["poll"],
-            timeout=self.module.params["timeout"]
-        ))
 
-    @require("id", "name")
-    @require("size_gigabytes")
+        self.module.exit_json(
+            changed=True,
+            action=self.do.volume.detach(
+                id=self.module.params["id"],
+                name=self.module.params["name"],
+                droplet_id=self.module.params["droplet_id"],
+                region=self.module.params["region"],
+                wait=self.module.params["wait"],
+                poll=self.module.params["poll"],
+                timeout=self.module.params["timeout"]
+            )
+        )
+
     def resize(self):
-        self.module.exit_json(changed=True, action=self.do.volume.resize(
-            self.module.params["id"],
-            self.module.params["size_gigabytes"],
-            region=self.module.params["region"],
-            wait=self.module.params["wait"],
-            poll=self.module.params["poll"],
-            timeout=self.module.params["timeout"]
-        ))
 
-    @require("id")
+        self.module.exit_json(
+            changed=True,
+            action=self.do.volume.resize(
+                self.module.params["id"],
+                self.module.params["size_gigabytes"],
+                region=self.module.params["region"],
+                wait=self.module.params["wait"],
+                poll=self.module.params["poll"],
+                timeout=self.module.params["timeout"]
+            )
+        )
+
     def action_list(self):
-        self.module.exit_json(changed=False, actions=self.do.volume.action_list(
-            self.module.params["id"]
-        ))
 
-    @require("id")
-    @require("action_id")
+        self.module.exit_json(
+            changed=False,
+            actions=self.do.volume.action_list(
+                self.module.params["id"]
+            )
+        )
+
     def action_info(self):
-        self.module.exit_json(changed=False, action=self.do.volume.action_info(
-            self.module.params["id"], self.module.params["action_id"]
-        ))
 
+        self.module.exit_json(
+            changed=False,
+            action=self.do.volume.action_info(
+                self.module.params["id"],
+                self.module.params["action_id"]
+            )
+        )
 
 if __name__ == '__main__':
     Volume()
